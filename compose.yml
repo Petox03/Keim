@@ -1,0 +1,17 @@
+name: keim
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - keim-gocache:/root/.cache/go-build
+      - keim-gomodcache:/root/.cache/go-mod
+    command: sleep infinity
+    tty: true
+
+volumes:
+  keim-gocache:
+  keim-gomodcache:

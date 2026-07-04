@@ -1,0 +1,26 @@
+.devin
+AGENTS.md
+
+# Compilados de Go (pueden no tener extensión)
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Tests
+*.out
+*.test
+*.prof
+
+# Recarga
+/tmp/
+/bin/
+
+
+# Gestión de Dependencias
+/vendor/
+
+
+.env
+.env.local
