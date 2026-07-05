@@ -1,0 +1,15 @@
+.git
+.gitignore
+
+.devin/
+.exe
+
+*.log
+Thumbs.db
+
+Dockerfile
+compose.yml
+docker-compose.yml
+
+.md
+LICENSE
