@@ -21,10 +21,11 @@ Un desarrollador que está aprendiendo Go y quiere experimentar sin instalar Go 
 
 ## Qué genera
 
-Keim inyecta 5 archivos en el directorio objetivo:
+Keim inyecta 6 archivos en el directorio objetivo:
 
 ```
 [Directorio del Proyecto]
+ ├── .dockerignore
  ├── .gitignore
  ├── compose.yml
  ├── Dockerfile
@@ -37,6 +38,7 @@ Keim inyecta 5 archivos en el directorio objetivo:
 - `Dockerfile` — imagen `golang:alpine` con cachés redirigidas a volúmenes persistibles.
 - `compose.yml` — servicio `app` dormido (`sleep infinity`), bind mount para código, volúmenes nombrados para caché.
 - `.gitignore` — excluye binarios temporales y caché local.
+- `.dockerignore` — excluye archivos irrelevantes del contexto de build de Docker.
 
 ## Cómo se usa
 
@@ -64,4 +66,4 @@ docker compose exec app go run .
 
 ## Estado
 
-MVP en fase de planeación. No hay código todavía. La documentación en `.devin/docs/` es la base de lo que se va a implementar.
+MVP en desarrollo. Iteración 1 (walking skeleton) en progreso: `project`, `validator`, `templates` y `generator` implementados. La documentación en `.devin/docs/` es la base de lo que se va a implementar.
