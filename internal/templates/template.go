@@ -10,7 +10,7 @@ import (
 )
 
 //go:embed files/*.tmpl
-var templatesFS embed.FS
+var templatesFS embed.FS // Esto significa Embed File System que es cuando incrustas múltiples archivos o carpetas enteras.
 
 // Collección de plantillas a nivel de paquete
 var cacheTemplates *template.Template
