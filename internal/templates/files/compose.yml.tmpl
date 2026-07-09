@@ -1,0 +1,17 @@
+name: {{ .Name }}
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - {{ .Name }}-gocache:/root/.cache/go-build
+      - {{ .Name }}-gomodcache:/root/.cache/go-mod
+    command: sleep infinity
+    tty: true
+
+volumes:
+  {{ .Name }}-gocache:
+  {{ .Name }}-gomodcache:
