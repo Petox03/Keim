@@ -11,13 +11,19 @@ import (
 // Validate comprueba si un directorio es apto para trabajar.
 // Retorna nil si está limpio, o un error descriptivo (con la ruta) si no existe,
 // no es accesible o contiene archivos en conflicto.
-func Validate(path string) error {
-	forbiddenFiles := map[string]bool{
-		".gitignore":  true,
-		"compose.yml": true,
-		"Dockerfile":  true,
-		"go.mod":      true,
-		"main.go":     true,
+func Validate(path string, keyFiles []string) error {
+	forbiddenFiles := make(map[string]bool)
+
+	for _, file := range keyFiles {
+		lower := strings.ToLower(file)
+		forbiddenFiles[lower] = true
+
+		if lower == "compose.yml" || lower == "compose.yaml" {
+			forbiddenFiles["compose.yml"] = true
+			forbiddenFiles["compose.yaml"] = true
+			forbiddenFiles["docker-compose.yml"] = true
+			forbiddenFiles["docker-compose.yaml"] = true
+		}
 	}
 
 	// 1. Intentamos leer el directorio directamente
@@ -37,9 +43,9 @@ func Validate(path string) error {
 	for _, file := range files {
 		// Asegurarnos de que sea un archivo y no una subcarpeta con el mismo nombre
 		if !file.IsDir() {
-			fileName := file.Name()
+			fileName := strings.ToLower(file.Name())
 			if forbiddenFiles[fileName] {
-				conflicts = append(conflicts, fileName)
+				conflicts = append(conflicts, file.Name())
 			}
 		}
 	}

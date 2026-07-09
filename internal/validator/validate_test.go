@@ -8,9 +8,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"keim/internal/validator"
+	"keim/internal/templates"
 )
 
 func TestValidate(t *testing.T) {
+	files := templates.FileNames()
+
 	tests := []struct {
 		CaseName          string
 		PreExistingFiles  []string
@@ -23,8 +26,8 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			CaseName:          "Conflict with critical Go files",
-			PreExistingFiles:  []string{"go.mod", "main.go", "README.md"},
-			ExpectedErrSuffix: "contiene archivos en conflicto: go.mod, main.go",
+			PreExistingFiles:  []string{"go.mod", "main.go", ".dockerignore", "README.md"},
+			ExpectedErrSuffix: "contiene archivos en conflicto: .dockerignore, go.mod, main.go",
 		},
 		{
 			CaseName:          "Conflict files",
@@ -48,7 +51,7 @@ func TestValidate(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			err := validator.Validate(tmpDir)
+			err := validator.Validate(tmpDir, files)
 
 			if tt.ExpectedErrSuffix == "" {
 				assert.NoError(t, err)
@@ -63,7 +66,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("Error: Route does not exist", func(t *testing.T) {
 		fakePath := "./ruta/completamente/inexistente/falsa"
-		err := validator.Validate(fakePath)
+		err := validator.Validate(fakePath, files)
 
 		assert.Error(t, err)
 		assert.Equal(t, fmt.Sprintf("la ruta '%s' no existe", fakePath), err.Error())
@@ -78,7 +81,7 @@ func TestValidate(t *testing.T) {
 
 		// Evaluamos pasándole el archivo en lugar del directorio.
 		// El error original del OS se preserva vía %w; verificamos solo el prefijo.
-		err = validator.Validate(filePath)
+		err = validator.Validate(filePath, files)
 
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, fmt.Sprintf("la ruta '%s' no es accesible:", filePath))
