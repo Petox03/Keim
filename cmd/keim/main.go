@@ -15,7 +15,7 @@ func main() {
 
 	projectData := project.Project{
 		Name: 		"Templating",
-		Path: 		"./test/",
+		Path: 		"./Templating/",
 		GoVersion: 	"1.26",
 	}
 
