@@ -1,12 +1,21 @@
 package generator
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"keim/internal/project"
 	"keim/internal/templates"
 )
+
+func CreateProjectDir(path string) error {
+	err := os.MkdirAll(path, 0755)
+	if err != nil {
+		return fmt.Errorf("error al crear el directorio del proyecto '%s': %w", path, err)
+	}
+	return nil
+}
 
 func Generate(p project.Project, filesToGenerate []string) error {
 

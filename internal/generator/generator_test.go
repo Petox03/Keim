@@ -13,6 +13,52 @@ import (
 
 var expectedFiles = templates.FileNames()
 
+func TestCreateProjectDir(t *testing.T) {
+	finalRoute := filepath.Join(t.TempDir(), "my-project")
+
+	err := generator.CreateProjectDir(finalRoute)
+
+	assert.NoError(t, err)
+
+	info, err := os.Stat(finalRoute)
+	assert.NoError(t, err)
+	assert.True(t, info.IsDir(), "Se esperaba que la ruta fuera un directorio")
+}
+
+func TestIdempotenceCallTwice(t *testing.T) {
+	finalRoute := filepath.Join(t.TempDir(), "my-project")
+
+	err := generator.CreateProjectDir(finalRoute)
+	assert.NoError(t, err)
+
+	witnessFile := filepath.Join(finalRoute, "test.txt")
+
+	err = os.WriteFile(witnessFile, []byte("datos de prueba"), 0644)
+	assert.NoError(t, err)
+
+	err = generator.CreateProjectDir(finalRoute)
+	assert.NoError(t, err)
+
+	_, err = os.Stat(witnessFile)
+	assert.NoError(t, err)
+
+	data, err := os.ReadFile(witnessFile)
+	assert.NoError(t, err)
+	assert.Equal(t, "datos de prueba", string(data))
+}
+
+func TestCreateDeepPaths(t *testing.T) {
+	tmpDir := t.TempDir()
+	deepRoute := filepath.Join(tmpDir, "level1", "level2", "my-project")
+
+	err := generator.CreateProjectDir(deepRoute)
+	assert.NoError(t, err)
+
+	info, err := os.Stat(deepRoute)
+	assert.NoError(t, err)
+	assert.True(t, info.IsDir(), "Se esperaba que la ruta profunda fuera un directorio")
+}
+
 func TestGenerateCreateAllFiles(t *testing.T) {
 	// Crear directorio temporal donde el generador pueda escribir
 	tmpDir := t.TempDir()

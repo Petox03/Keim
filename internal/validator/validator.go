@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var ErrPathNotFound = errors.New("la ruta especificada no existe")
+
 // Validate comprueba si un directorio es apto para trabajar.
 // Retorna nil si está limpio, o un error descriptivo (con la ruta) si no existe,
 // no es accesible o contiene archivos en conflicto.
@@ -30,7 +32,7 @@ func Validate(path string, keyFiles []string) error {
 	files, err := os.ReadDir(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("la ruta '%s' no existe", path)
+			return fmt.Errorf("%w: '%s'", ErrPathNotFound, path)
 		}
 		// Cubre permisos denegados, path es un archivo plano, etc.
 		// Envolvemos el error original para preservar información de diagnóstico.

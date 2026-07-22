@@ -57,7 +57,7 @@ func TestValidate(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.Error(t, err)
-				assert.Equal(t, fmt.Sprintf("la ruta '%s' %s", tmpDir, tt.ExpectedErrSuffix), err.Error())
+				assert.ErrorContains(t, err, tt.ExpectedErrSuffix)
 			}
 		})
 	}
@@ -68,8 +68,7 @@ func TestValidate(t *testing.T) {
 		fakePath := "./ruta/completamente/inexistente/falsa"
 		err := validator.Validate(fakePath, files)
 
-		assert.Error(t, err)
-		assert.Equal(t, fmt.Sprintf("la ruta '%s' no existe", fakePath), err.Error())
+		assert.ErrorIs(t, err, validator.ErrPathNotFound)
 	})
 
 	t.Run("Error: Route is a file, not a directory", func(t *testing.T) {
