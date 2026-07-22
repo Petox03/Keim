@@ -17,7 +17,7 @@ func PrintReport(w io.Writer, p project.Project, files []string) error {
 	// 1. Encabezado principal y detalles del proyecto
 	_, err := fmt.Fprintf(
 		w,
-		"🚀 Proyecto '%s' creado con éxito!\n\n📌 Detalles del proyecto:\n	• Ruta:           %s\n	• Versión de Go:  %s\n",
+		"Proyecto '%s' creado con éxito!\n\n📌 Detalles del proyecto:\n	• Ruta:           %s\n	• Versión de Go:  %s\n",
 		p.Name,
 		p.Path,
 		p.GoVersion,
@@ -27,7 +27,7 @@ func PrintReport(w io.Writer, p project.Project, files []string) error {
 	}
 
 	// 2. Sección de archivos generados
-	_, err = fmt.Fprintln(w, "\n📄 Archivos generados:")
+	_, err = fmt.Fprintln(w, "\nArchivos generados:")
 	if err != nil {
 		return fmt.Errorf("error al escribir encabezado de archivos: %w", err)
 	}
@@ -40,7 +40,7 @@ func PrintReport(w io.Writer, p project.Project, files []string) error {
 	}
 
 	// 3. Sección de siguientes pasos
-	_, err = fmt.Fprintln(w, "\n👉 Siguientes pasos:")
+	_, err = fmt.Fprintln(w, "\nSiguientes pasos:")
 	if err != nil {
 		return fmt.Errorf("error al escribir encabezado de pasos: %w", err)
 	}
@@ -50,7 +50,7 @@ func PrintReport(w io.Writer, p project.Project, files []string) error {
 	// Si el proyecto se creó en el directorio actual, omitimos el paso "cd"
 	if cleanPath == "." || cleanPath == "" {
 		const tpl = `	1. docker compose up -d
-   2. docker compose exec app go run .
+	2. docker compose exec app go run .
 `
 		_, err := fmt.Fprint(w, tpl)
 		if err != nil {
@@ -58,8 +58,8 @@ func PrintReport(w io.Writer, p project.Project, files []string) error {
 		}
 	} else {
 		const tpl = `	1. cd %s
-   2. docker compose up -d
-   3. docker compose exec app go run .
+	2. docker compose up -d
+	3. docker compose exec app go run .
 `
 		_, err := fmt.Fprintf(w, tpl, cleanPath)
 		if err != nil {
