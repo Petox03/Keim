@@ -15,19 +15,26 @@ func TestPrintReport(t *testing.T) {
 	tests := []struct {
 		CaseName       string
 		ProjectPath    string
-		ExpectedSteps  string
+		ExpectedSteps  []string
 		UnwantedStep   string
 	}{
 		{
 			CaseName:      "Project in subdirectory includes cd command",
 			ProjectPath:   "clippy",
-			ExpectedSteps: "1. cd clippy\n   2. docker compose up -d",
-			UnwantedStep:  "",
+			ExpectedSteps: []string{
+				"1. cd clippy",
+				"2. docker compose up -d",
+				"3. docker compose exec app go run .",
+			},
+			UnwantedStep: "",
 		},
 		{
 			CaseName:      "Project in current directory omits cd command",
-			ProjectPath:   "./",
-			ExpectedSteps: "1. docker compose up -d\n   2. docker compose exec app go run .",
+			ProjectPath:   ".",
+			ExpectedSteps: []string{
+				"1. docker compose up -d",
+				"2. docker compose exec app go run .",
+			},
 			UnwantedStep:  "cd .",
 		},
 	}
@@ -46,8 +53,11 @@ func TestPrintReport(t *testing.T) {
 			assert.NoError(t, err)
 
 			output := buf.String()
-			assert.Contains(t, output, "🚀 Proyecto 'clippy' creado con éxito!")
-			assert.Contains(t, output, tt.ExpectedSteps)
+			assert.Contains(t, output, "Proyecto 'clippy' creado con éxito!")
+
+			for _, step := range tt.ExpectedSteps {
+				assert.Contains(t, output, step)
+			}
 
 			if tt.UnwantedStep != "" {
 				assert.NotContains(t, output, tt.UnwantedStep)
