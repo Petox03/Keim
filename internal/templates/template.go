@@ -28,9 +28,16 @@ func init() {
 // que necesiten observar, manejar, o saber del listado de plantillas que tenemos.
 func FileNames() []string {
 	var names []string
-	for _, tmpl := range cacheTemplates.Templates() {
-		cleanName := strings.TrimSuffix(tmpl.Name(), ".tmpl")
-		names = append(names, cleanName)
+	files, err := templatesFS.ReadDir("files")
+	if err != nil {
+		return nil
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".tmpl") {
+			cleanName := strings.TrimSuffix(file.Name(), ".tmpl")
+			names = append(names, cleanName)
+		}
 	}
 	return names
 }
