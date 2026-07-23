@@ -31,7 +31,7 @@ func (hd *HostDetector) Detect() (string, error) {
 
     for _, word := range words {
 		if strings.HasPrefix(word, "go") && len(word) > 2 && word[2] >= '0' && word[2] <= '9' {
-			return strings.TrimPrefix(word, "go"), nil
+			return word[2:], nil
 		}
 	}
 

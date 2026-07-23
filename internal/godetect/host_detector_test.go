@@ -47,6 +47,14 @@ func TestHostDetector_Detect(t *testing.T) {
 				return []byte("go version devel go1.23.0 custom-build linux/amd64\n"), nil
 			},
 		},
+		{
+			CaseName:          "Malformed go prefix (no digits after 'go')",
+			expectedVersion:   "",
+			ExpectedErrSuffix: "no se encontró una versión válida de Go en la salida:",
+			mockExec: func(name string, args ...string) ([]byte, error) {
+				return []byte("go version godevel linux/amd64\n"), nil
+			},
+		},
 	}
 
 	for _, tt := range tests {
