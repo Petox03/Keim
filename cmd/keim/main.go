@@ -81,11 +81,12 @@ func main() {
 
 	// templates inspecciona directamente embed.FS para saber qué archivos genera Keim (ADR-025).
 	files := templates.FileNames()
+	forbiddenFiles := templates.GetForbiddenFiles()
 
 	// Validación pre-vuelo.
 	// Si la ruta no existe (ErrPathNotFound), se crea el directorio y se continúa (ADR-026).
 	// Si existen archivos en conflicto o la ruta no es accesible, aborta con exit 3.
-	if err := validator.Validate(p.Path, files); err != nil {
+	if err := validator.Validate(p.Path, forbiddenFiles); err != nil {
 		if errors.Is(err, validator.ErrPathNotFound) {
 			if err := generator.CreateProjectDir(p.Path); err != nil {
 				fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)

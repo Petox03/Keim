@@ -12,7 +12,7 @@ import (
 )
 
 //go:embed files/*.tmpl
-var templatesFS embed.FS // Esto significa Embed File System que es cuando incrustas múltiples archivos o carpetas enteras.
+var templatesFS embed.FS
 
 // getTemplates es la función memorizada a nivel de paquete.
 // Reemplaza a init() y a cacheTemplates.
@@ -26,9 +26,38 @@ var getTemplates = sync.OnceValues(func() (*template.Template, error) {
 	return tmpl, nil
 })
 
-// Como el paquete template es el que maneja todo lo relacionado con las plantillas del proyecto, vi coherente
-// que sea este el que tenga una función que las liste completamente, así puedo usarlo en los demás archivos
-// que necesiten observar, manejar, o saber del listado de plantillas que tenemos.
+// conflictRules define explícitamente qué variantes de nombres chocan entre sí.
+// Si agregas una plantilla nueva, solo debes declarar sus variantes aquí.
+var conflictRules = map[string][]string{
+	"compose": {
+		"compose.yml",
+		"compose.yaml",
+		"docker-compose.yml",
+		"docker-compose.yaml",
+	},
+	"dockerfile": {
+		"dockerfile",
+		"dockerfile.dev",
+		"dockerfile.prod",
+	},
+}
+
+// GetForbiddenFiles transforma la tabla de reglas en un conjunto (set)
+// de búsqueda rápida O(1) en minúsculas para el validador.
+func GetForbiddenFiles() map[string]bool {
+	forbidden := make(map[string]bool)
+
+	for _, files := range conflictRules {
+		for _, file := range files {
+			forbidden[strings.ToLower(file)] = true
+		}
+	}
+
+	return forbidden
+}
+
+// FileNames inspecciona directamente embed.FS para saber qué archivos genera Keim.
+// Es ultra rápido porque solo lee el directorio virtual en memoria sin parsear nada.
 func FileNames() []string {
 	var names []string
 	files, err := templatesFS.ReadDir("files")
@@ -45,11 +74,9 @@ func FileNames() []string {
 	return names
 }
 
+// Render procesa bajo demanda la plantilla solicitada e inyecta los datos.
 func Render(name string, data project.Project) ([]byte, error) {
 	// 1. Carga Lazy: Obtenemos el árbol de plantillas parseado.
-	// Si es la 1.ª vez, procesa files/*.tmpl.
-	// Si es la 2.ª+ vez, entrega el cache en nanosegundos.
-	// Si el parseo falló, propagamos el error hacia el caller (main/CLI) sin panic.
 	cacheTemplates, err := getTemplates()
 	if err != nil {
 		return nil, err

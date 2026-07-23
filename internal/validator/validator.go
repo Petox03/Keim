@@ -3,58 +3,34 @@ package validator
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"strings"
 )
 
-var ErrPathNotFound = errors.New("la ruta especificada no existe")
+var ErrPathNotFound = errors.New("la ruta no existe")
 
-// Validate comprueba si un directorio es apto para trabajar.
-// Retorna nil si está limpio, o un error descriptivo (con la ruta) si no existe,
-// no es accesible o contiene archivos en conflicto.
-func Validate(path string, keyFiles []string) error {
-	forbiddenFiles := make(map[string]bool)
-
-	for _, file := range keyFiles {
-		lower := strings.ToLower(file)
-		forbiddenFiles[lower] = true
-
-		if lower == "compose.yml" || lower == "compose.yaml" {
-			forbiddenFiles["compose.yml"] = true
-			forbiddenFiles["compose.yaml"] = true
-			forbiddenFiles["docker-compose.yml"] = true
-			forbiddenFiles["docker-compose.yaml"] = true
-		}
-	}
-
-	// 1. Intentamos leer el directorio directamente
-	files, err := os.ReadDir(path)
+// Validate comprueba que en el directorio destino no existan archivos en conflicto.
+// Es completamente agnóstico a las plantillas de Keim; solo consume la lista negra recibida.
+func Validate(targetDir string, forbiddenFiles map[string]bool) error {
+	entries, err := os.ReadDir(targetDir)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%w: '%s'", ErrPathNotFound, path)
+		if os.IsNotExist(err) {
+			return ErrPathNotFound
 		}
-		// Cubre permisos denegados, path es un archivo plano, etc.
-		// Envolvemos el error original para preservar información de diagnóstico.
-		return fmt.Errorf("la ruta '%s' no es accesible: %w", path, err)
+		return fmt.Errorf("no se pudo leer el directorio %s: %w", targetDir, err)
 	}
 
-	var conflicts []string
-
-	// 2. Iteramos sobre los elementos encontrados
-	for _, file := range files {
-		// Asegurarnos de que sea un archivo y no una subcarpeta con el mismo nombre
-		if !file.IsDir() {
-			fileName := strings.ToLower(file.Name())
-			if forbiddenFiles[fileName] {
-				conflicts = append(conflicts, file.Name())
-			}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
 		}
-	}
 
-	// 3. Si hay conflictos, los unimos en un único error descriptivo
-	if len(conflicts) > 0 {
-		return fmt.Errorf("la ruta '%s' contiene archivos en conflicto: %s", path, strings.Join(conflicts, ", "))
+		fileNameLower := strings.ToLower(entry.Name())
+
+		// Búsqueda O(1) en el map[string]bool
+		if forbiddenFiles[fileNameLower] {
+			return fmt.Errorf("conflicto detectado: el archivo %q ya existe en el destino", entry.Name())
+		}
 	}
 
 	return nil
