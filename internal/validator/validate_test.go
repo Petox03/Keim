@@ -13,33 +13,33 @@ import (
 )
 
 func TestValidate(t *testing.T) {
-	// Obtenemos la lista negra O(1) de archivos en conflicto desde templates
+	// Obtenemos la lista negra O(1) desacoplada desde el paquete templates
 	forbiddenFiles := templates.GetForbiddenFiles()
 
 	tests := []struct {
 		CaseName          string
 		PreExistingFiles  []string
-		ExpectedErrSubstring string // Subcadena esperada en el error ("" si debe pasar)
+		ExpectedErrSuffix string // "" significa que se espera nil (éxito)
 	}{
 		{
-			CaseName:             "Clean & valid route",
-			PreExistingFiles:     []string{"README.md"},
-			ExpectedErrSubstring: "",
+			CaseName:          "Clean & valid route",
+			PreExistingFiles:  []string{"README.md"},
+			ExpectedErrSuffix: "",
 		},
 		{
-			CaseName:             "Conflict with dockerfile",
-			PreExistingFiles:     []string{"dockerfile"},
-			ExpectedErrSubstring: "conflicto detectado: el archivo \"dockerfile\" ya existe",
+			CaseName:          "Conflict with critical Go files",
+			PreExistingFiles:  []string{"go.mod", "main.go", ".dockerignore", "README.md"},
+			ExpectedErrSuffix: "contiene archivos en conflicto: .dockerignore, go.mod, main.go",
 		},
 		{
-			CaseName:             "Conflict with compose variant",
-			PreExistingFiles:     []string{"compose.yaml"},
-			ExpectedErrSubstring: "conflicto detectado: el archivo \"compose.yaml\" ya existe",
+			CaseName:          "Conflict files",
+			PreExistingFiles:  []string{".gitignore", "compose.yml", "Dockerfile", "go.mod", "main.go"},
+			ExpectedErrSuffix: "contiene archivos en conflicto: .gitignore, Dockerfile, compose.yml, go.mod, main.go",
 		},
 		{
-			CaseName:             "A completely empty route is valid",
-			PreExistingFiles:     []string{},
-			ExpectedErrSubstring: "",
+			CaseName:          "A completely empty route is valid",
+			PreExistingFiles:  []string{},
+			ExpectedErrSuffix: "",
 		},
 	}
 
@@ -55,11 +55,11 @@ func TestValidate(t *testing.T) {
 
 			err := validator.Validate(tmpDir, forbiddenFiles)
 
-			if tt.ExpectedErrSubstring == "" {
+			if tt.ExpectedErrSuffix == "" {
 				assert.NoError(t, err)
 			} else {
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, tt.ExpectedErrSubstring)
+				assert.ErrorContains(t, err, tt.ExpectedErrSuffix)
 			}
 		})
 	}
@@ -67,10 +67,11 @@ func TestValidate(t *testing.T) {
 	// --- SUBTESTS AISLADOS PARA ESCENARIOS DE ERROR DEL PAQUETE OS ---
 
 	t.Run("Error: Route does not exist", func(t *testing.T) {
-		fakePath := filepath.Join(t.TempDir(), "ruta_inexistente")
+		fakePath := "./ruta/completamente/inexistente/falsa"
 		err := validator.Validate(fakePath, forbiddenFiles)
 
 		assert.ErrorIs(t, err, validator.ErrPathNotFound)
+		assert.ErrorContains(t, err, fmt.Sprintf("'%s'", fakePath))
 	})
 
 	t.Run("Error: Route is a file, not a directory", func(t *testing.T) {
@@ -80,10 +81,10 @@ func TestValidate(t *testing.T) {
 		err := os.WriteFile(filePath, []byte("hola"), 0644)
 		assert.NoError(t, err)
 
-		// Evaluamos pasándole un archivo en lugar del directorio
+		// Evaluamos pasándole el archivo en lugar del directorio.
 		err = validator.Validate(filePath, forbiddenFiles)
 
 		assert.Error(t, err)
-		assert.ErrorContains(t, err, fmt.Sprintf("no se pudo leer el directorio %s:", filePath))
+		assert.ErrorContains(t, err, fmt.Sprintf("la ruta '%s' no es accesible:", filePath))
 	})
 }

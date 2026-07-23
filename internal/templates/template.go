@@ -47,6 +47,12 @@ var conflictRules = map[string][]string{
 func GetForbiddenFiles() map[string]bool {
 	forbidden := make(map[string]bool)
 
+	// 1. Por defecto, TODOS los archivos que Keim genera son prohibidos si ya existen
+    for _, name := range FileNames() {
+        forbidden[strings.ToLower(name)] = true
+    }
+
+	// 2. Agregamos las variantes/alias explícitos definidos en las reglas
 	for _, files := range conflictRules {
 		for _, file := range files {
 			forbidden[strings.ToLower(file)] = true
