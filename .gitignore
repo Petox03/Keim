@@ -8,6 +8,7 @@ AGENTS.md
 *.dll
 *.so
 *.dylib
+build/
 
 # Tests
 *.out
