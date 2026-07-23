@@ -26,30 +26,32 @@ var strategyFactory = map[string]func(version string) godetect.VersionStrategy{
 }
 
 func main() {
-	// Paso 1-2: verificar que el comando sea "init".
-	// Keim en esta iteración solo entiende "init". Cualquier otra cosa es error de uso (exit 2).
+	// Paso 1-2: Verificar que el primer argumento posicional sea el subcomando "init".
+	// Keim en esta iteración solo entiende "init". Cualquier otra opción o ausencia
+	// de subcomando es un error de uso (exit 2).
 	if len(os.Args) < 2 || os.Args[1] != "init" {
 		fmt.Fprintln(os.Stderr, "uso: keim init [--detect <cascada>] [nombre]")
 		os.Exit(2)
 	}
 
-	// Paso 3: sacar "init" de os.Args para que flag.Parse() no se confunda con él.
-	// Nota (ADR-027): esto NO permite flags en cualquier posición. flag.Parse() se
-	// detiene en el primer argumento posicional. El usuario debe poner --detect
-	// ANTES del nombre: "keim init --detect host clippy".
-	os.Args = append(os.Args[:1], os.Args[2:]...)
+	// Paso 3: Crear un FlagSet aislado para el subcomando "init".
+	initCmd := flag.NewFlagSet("init", flag.ExitOnError)
 
-	// Paso 4-5: declarar y parsear flags.
-	detectFlag := flag.String("detect", "", "cascada de detección (ej: host,manual=1.26)")
-	flag.Parse()
+	// Paso 4-5: Registrar y parsear banderas exclusivas de "init".
+	// Nota (ADR-027): flag.FlagSet detiene el parseo al encontrar el primer argumento posicional.
+	// Esto exige al usuario colocar las banderas ANTES del nombre del proyecto:
+	// "keim init --detect host clippy". Si lo invierte, --detect se tratará como posicional sobrante.
+	detectFlag := initCmd.String("detect", "", "cascada de detección (ej: host,manual=1.26)")
 
-	// Paso 6: obtener el nombre del proyecto si lo hay (sobrante tras parsear flags).
-	// En esta iteración Keim acepta máximo 1 argumento posicional (el nombre del
-	// proyecto). Si hay más, es error de uso: el usuario probablemente puso --detect
-	// después del nombre (flag.Parse() se detiene ahí y lo deja como posicional) o
-	// pasó varios nombres. En cualquier caso, mejor un mensaje claro que un flag
-	// silenciosamente ignorado que termina en "detección fallida" engañoso.
-	args := flag.Args()
+	if err := initCmd.Parse(os.Args[2:]); err != nil {
+		os.Exit(2)
+	}
+
+	// Paso 6: Obtener el nombre del proyecto desde los argumentos posicionales restantes.
+	// Keim acepta máximo 1 argumento posicional (el nombre). Si hay más, es error de uso:
+	// el usuario probablemente puso banderas después del nombre (haciendo que el parsing se detenga)
+	// o pasó múltiples nombres. Abortamos para evitar conductas engañosas.
+	args := initCmd.Args()
 	if len(args) > 1 {
 		fmt.Fprintln(os.Stderr, "keim: error: demasiados argumentos posicionales. Uso: keim init [--detect <cascada>] [nombre]")
 		os.Exit(2)
@@ -59,7 +61,7 @@ func main() {
 		projectName = args[0]
 	}
 
-	// Paso 7: resolver Name y Path según haya o no nombre.
+	// Paso 7: Resolver Name y Path según se haya proporcionado o no un nombre.
 	projectPath := "."
 	if projectName == "" {
 		cwd, err := os.Getwd()
@@ -77,12 +79,12 @@ func main() {
 		Path: projectPath,
 	}
 
-	// Fuente única de verdad: templates sabe qué archivos genera Keim (ADR-025).
+	// templates inspecciona directamente embed.FS para saber qué archivos genera Keim (ADR-025).
 	files := templates.FileNames()
 
 	// Validación pre-vuelo.
-	// Si la ruta no existe (ErrPathNotFound), se crea y se continúa (ADR-026).
-	// Si hay conflictos o la ruta no es accesible, aborta con exit 3.
+	// Si la ruta no existe (ErrPathNotFound), se crea el directorio y se continúa (ADR-026).
+	// Si existen archivos en conflicto o la ruta no es accesible, aborta con exit 3.
 	if err := validator.Validate(p.Path, files); err != nil {
 		if errors.Is(err, validator.ErrPathNotFound) {
 			if err := generator.CreateProjectDir(p.Path); err != nil {
@@ -95,15 +97,15 @@ func main() {
 		}
 	}
 
-	// Paso 8: resolver la cascada de detección según --detect.
-	// Error de parsing del flag = error de uso (exit 2).
+	// Paso 8: Resolver la cascada de detección según la bandera --detect.
+	// Error de formato en el flag = error de uso (exit 2).
 	strategies, err := parseDetect(*detectFlag)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
 		os.Exit(2)
 	}
 
-	// Detección de versión de Go. Si todas las estrategias fallan, exit 4.
+	// Detección de la versión de Go. Si ninguna estrategia responde con éxito, aborta con exit 4.
 	version, err := godetect.Detect(strategies)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "keim: error: detección fallida: %v\n", err)
@@ -112,29 +114,29 @@ func main() {
 
 	p.GoVersion = version
 
-	// Generación de archivos. Error de IO = exit 1.
+	// Generación de archivos desde plantillas embebidas. Error de I/O = exit 1.
 	if err := generator.Generate(p, files); err != nil {
 		fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Reporte final por ui.PrintReport (commit 6, io.Writer inyectable).
+	// Imprimir el reporte final en consola utilizando ui.PrintReport (io.Writer inyectable).
 	if err := ui.PrintReport(os.Stdout, p, files); err != nil {
 		fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-// parseDetect convierte el valor de --detect en []VersionStrategy.
+// parseDetect convierte el string de la bandera --detect en una lista ordenable de []VersionStrategy.
 // Sintaxis (ADR-004):
-//   --detect host,manual=1.26   → cascada en ese orden
-//   --detect host               → solo host
-//   --detect manual=1.26        → manual con versión explícita
-//   --detect "" (sin flag)      → default: host,manual (sin versión explícita)
+//   --detect host,manual=1.26   → Cascada en ese orden
+//   --detect host               → Solo detección local de Go
+//   --detect manual=1.26        → Manual con versión explícita
+//   --detect "" (sin flag)      → Default: host -> manual (sin versión explícita)
 func parseDetect(raw string) ([]godetect.VersionStrategy, error) {
 	if raw == "" {
 		// Default de iteración 1: host → manual (sin versión explícita).
-		// En iteración 2 esto se lee de config.toml.
+		// En iteraciones futuras esta cascada por defecto se leerá desde config.toml.
 		return []godetect.VersionStrategy{
 			godetect.NewHostDetector(),
 			godetect.NewManualDetector(""),
