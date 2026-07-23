@@ -25,17 +25,15 @@ func (hd *HostDetector) Detect() (string, error) {
 		return "", fmt.Errorf("error al ejecutar el comando: %w", err)
 	}
 
-    // TODO: parsing frágil por índice, buscar la palabra que empieza con 'go' es mejor.
-
 	// El output suele traer un salto de línea al final, Limpiar y separar
 	rawVersion := strings.TrimSpace(string(output))
     words := strings.Fields(rawVersion)
 
-    if len(words) < 3 {
-        return "", fmt.Errorf("la salida del comando no tiene el formato esperado: %s", rawVersion)
-    }
+    for _, word := range words {
+		if strings.HasPrefix(word, "go") && len(word) > 2 && word[2] >= '0' && word[2] <= '9' {
+			return strings.TrimPrefix(word, "go"), nil
+		}
+	}
 
-    version := strings.TrimPrefix(words[2], "go")
-
-	return version, nil
+	return "", fmt.Errorf("no se encontró una versión válida de Go en la salida: %s", rawVersion)
 }

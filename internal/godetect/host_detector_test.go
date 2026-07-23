@@ -27,15 +27,24 @@ func TestHostDetector_Detect(t *testing.T) {
 			expectedVersion: "",
 			ExpectedErrSuffix: "error al ejecutar el comando",
 			mockExec: func(name string, args ...string) ([]byte, error) {
-				return nil, errors.New("error al ejecutar el comando")
+				return nil, errors.New("executable file not found in $PATH")
 			},
 		},
 		{
 			CaseName:        "Unexpected format: fewer than 3 words",
 			expectedVersion: "",
-			ExpectedErrSuffix: "la salida del comando no tiene el formato esperado:",
+			ExpectedErrSuffix: "no se encontró una versión válida de Go en la salida:",
 			mockExec: func(name string, args ...string) ([]byte, error) {
 				return []byte("Broken command"), nil
+			},
+		},
+		{
+			CaseName:          "Custom or modified output (devel / extra words)",
+			expectedVersion:   "1.23.0",
+			ExpectedErrSuffix: "",
+			mockExec: func(name string, args ...string) ([]byte, error) {
+		        // Simula salidas con prefijos o detalles extra antes/después de la versión
+				return []byte("go version devel go1.23.0 custom-build linux/amd64\n"), nil
 			},
 		},
 	}
