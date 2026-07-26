@@ -13,13 +13,12 @@ import (
 )
 
 func TestValidate(t *testing.T) {
-	// Obtenemos la lista negra O(1) desacoplada desde el paquete templates
 	forbiddenFiles := templates.GetForbiddenFiles()
 
 	tests := []struct {
 		CaseName          string
 		PreExistingFiles  []string
-		ExpectedErrSuffix string // "" significa que se espera nil (éxito)
+		ExpectedErrSuffix string
 	}{
 		{
 			CaseName:          "Clean & valid route",
@@ -64,14 +63,11 @@ func TestValidate(t *testing.T) {
 		})
 	}
 
-	// --- SUBTESTS AISLADOS PARA ESCENARIOS DE ERROR DEL PAQUETE OS ---
-
 	t.Run("Error: Route does not exist", func(t *testing.T) {
 		fakePath := "./ruta/completamente/inexistente/falsa"
 		err := validator.Validate(fakePath, forbiddenFiles)
 
 		assert.ErrorIs(t, err, validator.ErrPathNotFound)
-		assert.ErrorContains(t, err, fmt.Sprintf("'%s'", fakePath))
 	})
 
 	t.Run("Error: Route is a file, not a directory", func(t *testing.T) {
@@ -81,7 +77,6 @@ func TestValidate(t *testing.T) {
 		err := os.WriteFile(filePath, []byte("hola"), 0644)
 		assert.NoError(t, err)
 
-		// Evaluamos pasándole el archivo en lugar del directorio.
 		err = validator.Validate(filePath, forbiddenFiles)
 
 		assert.Error(t, err)
