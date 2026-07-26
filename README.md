@@ -43,12 +43,18 @@ Keim inyecta 6 archivos en el directorio objetivo:
 ## Cómo se usa
 
 ```
-keim init                                # Siembra en el directorio actual, cascada por defecto
+keim init                                # Siembra en el directorio actual, cascada por defecto (host → manual)
 keim init mi-proyecto                    # Crea carpeta y siembra allí
-keim init --detect host,internet         # Cascada personalizada
-keim init --detect manual=1.26           # Versión fija explícita
-keim init --detect manual                # Manual sin versión (Keim pregunta por stdin)
+keim init --detect host mi-proyecto      # Solo detección del host
+keim init --detect manual=1.26 mi-proyecto  # Versión fija explícita
 ```
+
+> **Importante:** `--detect` va antes del nombre del proyecto, no después
+> (`keim init mi-proyecto --detect host` no funciona — ver ADR-027 en `docs/decisions.md`).
+
+**Estrategias disponibles en esta iteración:** `host` (detecta el Go instalado en la
+máquina) y `manual=X.Y` (versión explícita). `internet` y `manual` sin versión (prompt por
+stdin) están planeados para iteración 2.
 
 Después de generar, el flujo de desarrollo es:
 
@@ -66,4 +72,4 @@ docker compose exec app go run .
 
 ## Estado
 
-MVP en desarrollo. Iteración 1 (walking skeleton) en progreso: `project`, `validator`, `templates` y `generator` implementados. La documentación en `.devin/docs/` es la base de lo que se va a implementar.
+MVP en desarrollo. Iteración 1 (walking skeleton) prácticamente completa: `keim init` es funcional end-to-end (commits 1-7 de `.devin/plans/iteracion-1-walking-skeleton.md`). Pendiente: commit 8 (`internal/config`, sin integrar aún en `main.go`). La documentación en `.devin/docs/` es la base de lo que se va a implementar.
