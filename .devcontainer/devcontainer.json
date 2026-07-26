@@ -1,0 +1,17 @@
+{
+  "name": "Keim Dev",
+  "dockerComposeFile": ["../compose.yml"],
+  "service": "app",
+  "workspaceFolder": "/app",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.Go"
+      ],
+      "settings": {
+        "go.gopath": "/root/go",
+        "go.useLanguageServer": true
+      }
+    }
+  }
+}
