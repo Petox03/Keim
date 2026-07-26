@@ -130,10 +130,11 @@ func main() {
 
 // parseDetect convierte el string de la bandera --detect en una lista ordenable de []VersionStrategy.
 // Sintaxis (ADR-004):
-//   --detect host,manual=1.26   → Cascada en ese orden
-//   --detect host               → Solo detección local de Go
-//   --detect manual=1.26        → Manual con versión explícita
-//   --detect "" (sin flag)      → Default: host -> manual (sin versión explícita)
+//
+//	--detect host,manual=1.26   → Cascada en ese orden
+//	--detect host               → Solo detección local de Go
+//	--detect manual=1.26        → Manual con versión explícita
+//	--detect "" (sin flag)      → Default: host -> manual (sin versión explícita)
 func parseDetect(raw string) ([]godetect.VersionStrategy, error) {
 	if raw == "" {
 		// Default de iteración 1: host → manual (sin versión explícita).

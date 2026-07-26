@@ -1,8 +1,7 @@
 package project
 
 type Project struct {
-	Name		string
-	Path		string
-	GoVersion	string
+	Name      string
+	Path      string
+	GoVersion string
 }
-

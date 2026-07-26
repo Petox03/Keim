@@ -15,24 +15,24 @@ func TestHostDetector_Detect(t *testing.T) {
 		mockExec          func(name string, args ...string) ([]byte, error)
 	}{
 		{
-			CaseName:        "Correct output with a line break",
-			expectedVersion: "1.26.2",
+			CaseName:          "Correct output with a line break",
+			expectedVersion:   "1.26.2",
 			ExpectedErrSuffix: "",
 			mockExec: func(name string, args ...string) ([]byte, error) {
 				return []byte("go version go1.26.2 linux/amd64\n"), nil
 			},
 		},
 		{
-			CaseName:        "Run time error: The 'go' command doesn't exist",
-			expectedVersion: "",
+			CaseName:          "Run time error: The 'go' command doesn't exist",
+			expectedVersion:   "",
 			ExpectedErrSuffix: "error al ejecutar el comando",
 			mockExec: func(name string, args ...string) ([]byte, error) {
 				return nil, errors.New("executable file not found in $PATH")
 			},
 		},
 		{
-			CaseName:        "Unexpected format: fewer than 3 words",
-			expectedVersion: "",
+			CaseName:          "Unexpected format: fewer than 3 words",
+			expectedVersion:   "",
 			ExpectedErrSuffix: "no se encontró una versión válida de Go en la salida:",
 			mockExec: func(name string, args ...string) ([]byte, error) {
 				return []byte("Broken command"), nil
@@ -43,7 +43,7 @@ func TestHostDetector_Detect(t *testing.T) {
 			expectedVersion:   "1.23.0",
 			ExpectedErrSuffix: "",
 			mockExec: func(name string, args ...string) ([]byte, error) {
-		        // Simula salidas con prefijos o detalles extra antes/después de la versión
+				// Simula salidas con prefijos o detalles extra antes/después de la versión
 				return []byte("go version devel go1.23.0 custom-build linux/amd64\n"), nil
 			},
 		},

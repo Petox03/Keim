@@ -64,9 +64,9 @@ func TestGenerateCreateAllFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	p := project.Project{
-		Name: 		"scaffold_test",
-		Path: 		tmpDir,
-		GoVersion:	"1.26",
+		Name:      "scaffold_test",
+		Path:      tmpDir,
+		GoVersion: "1.26",
 	}
 
 	// Ejecutar generador
@@ -74,7 +74,7 @@ func TestGenerateCreateAllFiles(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Obtener dinámicamente qué archivos se supone que debió haber creado
-	assert.NotEmpty(t, expectedFiles,"La caché de templates no debería estar vacía")
+	assert.NotEmpty(t, expectedFiles, "La caché de templates no debería estar vacía")
 
 	// Verificar en el disco que cada archivo exista en el tmpDir
 	for _, fileName := range expectedFiles {

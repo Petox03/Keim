@@ -1,8 +1,8 @@
 package templates_test
 
 import (
-	"testing"
 	"strings"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"keim/internal/project"

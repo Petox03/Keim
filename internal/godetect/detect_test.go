@@ -24,36 +24,36 @@ func TestDetect(t *testing.T) {
 	)
 
 	tests := []struct {
-		CaseName		string
-		inputStrategies	[]VersionStrategy
+		CaseName        string
+		inputStrategies []VersionStrategy
 		expectedVersion string
-		expectedErrors    []error
+		expectedErrors  []error
 	}{
 		{
-			CaseName:        	"The first strategy works",
+			CaseName: "The first strategy works",
 			inputStrategies: []VersionStrategy{
 				fakeStrategy{version: "1.21.0", err: nil},
 			},
-			expectedVersion:	"1.21.0",
-			expectedErrors:		nil,
+			expectedVersion: "1.21.0",
+			expectedErrors:  nil,
 		},
 		{
-			CaseName:        	"The first strategy fails; the second one finds the version",
+			CaseName: "The first strategy fails; the second one finds the version",
 			inputStrategies: []VersionStrategy{
 				fakeStrategy{version: "", err: errors.New("permiso denegado")},
 				fakeStrategy{version: "1.22.0", err: nil},
 			},
-			expectedVersion:	"1.22.0",
-			expectedErrors:		nil,
+			expectedVersion: "1.22.0",
+			expectedErrors:  nil,
 		},
 		{
-			CaseName: 			"All strategies fail",
-			inputStrategies: 	[]VersionStrategy{
+			CaseName: "All strategies fail",
+			inputStrategies: []VersionStrategy{
 				fakeStrategy{version: "", err: errA},
 				fakeStrategy{version: "", err: errB},
 			},
-			expectedVersion: 	"",
-			expectedErrors:     []error{errA, errB},
+			expectedVersion: "",
+			expectedErrors:  []error{errA, errB},
 		},
 	}
 

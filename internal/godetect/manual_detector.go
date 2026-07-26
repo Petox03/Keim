@@ -5,11 +5,11 @@ import (
 )
 
 type ManualDetector struct {
-    Version string
+	Version string
 }
 
 func NewManualDetector(version string) *ManualDetector {
-	return &ManualDetector {
+	return &ManualDetector{
 		Version: version,
 	}
 }
