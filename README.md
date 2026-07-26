@@ -72,4 +72,4 @@ docker compose exec app go run .
 
 ## Estado
 
-MVP en desarrollo. Iteración 1 (walking skeleton) prácticamente completa: `keim init` es funcional end-to-end (commits 1-7 de `.devin/plans/iteracion-1-walking-skeleton.md`). Pendiente: commit 8 (`internal/config`, sin integrar aún en `main.go`). La documentación en `.devin/docs/` es la base de lo que se va a implementar.
+MVP en desarrollo. Iteración 1 (walking skeleton) cerrada: `keim init` es funcional end-to-end (commits 1-7 de `.devin/plans/iteracion-1-walking-skeleton.md`). El commit 8 (`internal/config`) se difiere formalmente a iteración 2, junto con `InternetDetector` y su integración real en `main.go` (ver ADR-034 en `.devin/docs/decisions.md`). La documentación en `.devin/docs/` es la base de lo que se va a implementar.
