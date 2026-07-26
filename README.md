@@ -53,7 +53,7 @@ keim init --detect manual=1.26 mi-proyecto  # Versión fija explícita
 ```
 
 > **Importante:** `--detect` va antes del nombre del proyecto, no después
-> (`keim init mi-proyecto --detect host` no funciona — ver ADR-027 en `docs/decisions.md`).
+> (`keim init mi-proyecto --detect host` no funciona).
 
 **Estrategias disponibles en esta iteración:** `host` (detecta el Go instalado en la
 máquina) y `manual=X.Y` (versión explícita). `internet` y `manual` sin versión (prompt por
@@ -67,12 +67,6 @@ docker compose up -d
 docker compose exec app go run .
 ```
 
-## Documentación
-
-- [`docs/decisions.md`](.devin/docs/decisions.md) — Decisiones de diseño con contexto, alternativas y trade-offs (ADRs).
-- [`docs/architecture.md`](.devin/docs/architecture.md) — Arquitectura técnica: paquetes, responsabilidades, flujo, dependencias.
-- [`docs/roadmap.md`](.devin/docs/roadmap.md) — Deudas técnicas, planes futuros y lo que NO está en el MVP.
-
 ## Estado
 
-MVP en desarrollo. Iteración 1 (walking skeleton) cerrada: `keim init` es funcional end-to-end (commits 1-7 de `.devin/plans/iteracion-1-walking-skeleton.md`). El commit 8 (`internal/config`) se difiere formalmente a iteración 2, junto con `InternetDetector` y su integración real en `main.go` (ver ADR-034 en `.devin/docs/decisions.md`). La documentación en `.devin/docs/` es la base de lo que se va a implementar.
+MVP en desarrollo. Iteración 1 (walking skeleton) cerrada: `keim init` es funcional end-to-end. El commit 8 (`internal/config`) se difiere formalmente a iteración 2, junto con `InternetDetector` y su integración real en `main.go`.
