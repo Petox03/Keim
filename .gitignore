@@ -18,6 +18,9 @@ build/
 /tmp/
 /bin/
 
+# Scratch files para pruebas manuales
+cmd/test/
+
 
 # Gestión de Dependencias
 /vendor/

@@ -21,7 +21,7 @@ import (
 var strategyFactory = map[string]func(version string) godetect.VersionStrategy{
 	"host": func(_ string) godetect.VersionStrategy { return godetect.NewHostDetector() },
 	"manual": func(version string) godetect.VersionStrategy {
-		return godetect.NewManualDetector(version)
+		return godetect.NewManualDetector(version, os.Stdin, os.Stdout)
 	},
 }
 
@@ -86,12 +86,10 @@ func main() {
 	// Validación pre-vuelo.
 	// Si la ruta no existe (ErrPathNotFound), se crea el directorio y se continúa (ADR-026).
 	// Si existen archivos en conflicto o la ruta no es accesible, aborta con exit 3.
+	needDir := false
 	if err := validator.Validate(p.Path, forbiddenFiles); err != nil {
 		if errors.Is(err, validator.ErrPathNotFound) {
-			if err := generator.CreateProjectDir(p.Path); err != nil {
-				fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
-				os.Exit(1)
-			}
+			needDir = true
 		} else {
 			fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
 			os.Exit(3)
@@ -116,6 +114,12 @@ func main() {
 	p.GoVersion = version
 
 	// Generación de archivos desde plantillas embebidas. Error de I/O = exit 1.
+	if needDir {
+		if err := generator.CreateProjectDir(p.Path); err != nil {
+			fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
+			os.Exit(1)
+		}
+	}
 	if err := generator.Generate(p, files); err != nil {
 		fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
 		os.Exit(1)
@@ -141,7 +145,7 @@ func parseDetect(raw string) ([]godetect.VersionStrategy, error) {
 		// En iteraciones futuras esta cascada por defecto se leerá desde config.toml.
 		return []godetect.VersionStrategy{
 			godetect.NewHostDetector(),
-			godetect.NewManualDetector(""),
+			godetect.NewManualDetector("", os.Stdin, os.Stdout),
 		}, nil
 	}
 
