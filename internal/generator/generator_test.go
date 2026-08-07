@@ -79,11 +79,11 @@ func TestWriteFiles(t *testing.T) {
 		}
 
 		files := map[string][]byte{
-			"go.mod":       []byte("module scaffold_test\n\ngo 1.26\n"),
-			"main.go":      []byte("package main\n\nfunc main() {}\n"),
-			"Dockerfile":   []byte("FROM golang:1.26-alpine\n"),
-			"compose.yml":  []byte("services:\n  app:\n"),
-			".gitignore":   []byte("*.exe\n"),
+			"go.mod":        []byte("module scaffold_test\n\ngo 1.26\n"),
+			"main.go":       []byte("package main\n\nfunc main() {}\n"),
+			"Dockerfile":    []byte("FROM golang:1.26-alpine\n"),
+			"compose.yml":   []byte("services:\n  app:\n"),
+			".gitignore":    []byte("*.exe\n"),
 			".dockerignore": []byte(".git\n"),
 		}
 
