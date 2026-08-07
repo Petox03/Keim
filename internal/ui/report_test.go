@@ -4,13 +4,21 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"keim/internal/project"
 	"keim/internal/ui"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPrintReport(t *testing.T) {
-	files := []string{".dockerignore", ".gitignore", "Dockerfile", "compose.yml", "go.mod", "main.go"}
+	files := []string{
+		".dockerignore",
+		".gitignore",
+		"Dockerfile",
+		"compose.yml",
+		"go.mod",
+		"main.go",
+	}
 
 	tests := []struct {
 		CaseName      string

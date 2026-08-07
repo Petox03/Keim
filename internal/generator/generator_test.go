@@ -5,24 +5,45 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"keim/internal/generator"
 	"keim/internal/project"
-	"keim/internal/templates"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var expectedFiles = templates.FileNames()
-
 func TestCreateProjectDir(t *testing.T) {
-	finalRoute := filepath.Join(t.TempDir(), "my-project")
+	tests := []struct {
+		name      string
+		getRoute  func(tmpDir string) string
+		deepCheck bool
+	}{
+		{
+			name: "Standard Path",
+			getRoute: func(tmpDir string) string {
+				return filepath.Join(tmpDir, "my-project")
+			},
+		},
+		{
+			name: "Deep Paths",
+			getRoute: func(tmpDir string) string {
+				return filepath.Join(tmpDir, "level1", "level2", "my-project")
+			},
+			deepCheck: true,
+		},
+	}
 
-	err := generator.CreateProjectDir(finalRoute)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			finalRoute := tt.getRoute(t.TempDir())
 
-	assert.NoError(t, err)
+			err := generator.CreateProjectDir(finalRoute)
+			assert.NoError(t, err)
 
-	info, err := os.Stat(finalRoute)
-	assert.NoError(t, err)
-	assert.True(t, info.IsDir(), "Se esperaba que la ruta fuera un directorio")
+			info, err := os.Stat(finalRoute)
+			assert.NoError(t, err)
+			assert.True(t, info.IsDir(), "Se esperaba que la ruta fuera un directorio")
+		})
+	}
 }
 
 func TestIdempotenceCallTwice(t *testing.T) {
@@ -47,66 +68,92 @@ func TestIdempotenceCallTwice(t *testing.T) {
 	assert.Equal(t, "datos de prueba", string(data))
 }
 
-func TestCreateDeepPaths(t *testing.T) {
-	tmpDir := t.TempDir()
-	deepRoute := filepath.Join(tmpDir, "level1", "level2", "my-project")
+func TestWriteFiles(t *testing.T) {
+	t.Run("CreateAllFiles", func(t *testing.T) {
+		tmpDir := t.TempDir()
 
-	err := generator.CreateProjectDir(deepRoute)
-	assert.NoError(t, err)
+		p := project.Project{
+			Name:      "scaffold_test",
+			Path:      tmpDir,
+			GoVersion: "1.26",
+		}
 
-	info, err := os.Stat(deepRoute)
-	assert.NoError(t, err)
-	assert.True(t, info.IsDir(), "Se esperaba que la ruta profunda fuera un directorio")
-}
+		files := map[string][]byte{
+			"go.mod":       []byte("module scaffold_test\n\ngo 1.26\n"),
+			"main.go":      []byte("package main\n\nfunc main() {}\n"),
+			"Dockerfile":   []byte("FROM golang:1.26-alpine\n"),
+			"compose.yml":  []byte("services:\n  app:\n"),
+			".gitignore":   []byte("*.exe\n"),
+			".dockerignore": []byte(".git\n"),
+		}
 
-func TestGenerateCreateAllFiles(t *testing.T) {
-	// Crear directorio temporal donde el generador pueda escribir
-	tmpDir := t.TempDir()
-
-	p := project.Project{
-		Name:      "scaffold_test",
-		Path:      tmpDir,
-		GoVersion: "1.26",
-	}
-
-	// Ejecutar generador
-	err := generator.Generate(p, expectedFiles)
-	assert.NoError(t, err)
-
-	// Obtener dinámicamente qué archivos se supone que debió haber creado
-	assert.NotEmpty(t, expectedFiles, "La caché de templates no debería estar vacía")
-
-	// Verificar en el disco que cada archivo exista en el tmpDir
-	for _, fileName := range expectedFiles {
-		path := filepath.Join(tmpDir, fileName)
-
-		_, err := os.Stat(path)
-		assert.NoError(t, err, "El archivo %s debió haber sido creado por el generador", fileName)
-
-		// Opcional pero validamos que no están vacíos
-		content, err := os.ReadFile(path)
+		err := generator.WriteFiles(p, files)
 		assert.NoError(t, err)
-		assert.NotEmpty(t, content, "El archivo %s se creó vacío", fileName)
-	}
-}
 
-func TestGenerateWithInvalidPath(t *testing.T) {
-	invalidPath := "./invalid-path-totalmente-falso"
+		for relPath, expectedContent := range files {
+			fullPath := filepath.Join(tmpDir, relPath)
 
-	p := project.Project{
-		Name:      "scaffold_invalid",
-		Path:      invalidPath,
-		GoVersion: "1.26",
-	}
+			content, err := os.ReadFile(fullPath)
+			assert.NoError(t, err, "El archivo %s debió haber sido creado por el generador", relPath)
+			assert.Equal(t, expectedContent, content, "El contenido del archivo %s no coincide", relPath)
+		}
+	})
 
-	err := generator.Generate(p, expectedFiles) // asumiendo que ya borraste el expectedFiles de los parámetros
-	assert.Error(t, err)
+	t.Run("WithInvalidPath", func(t *testing.T) {
+		// /dev/null es un archivo, no un directorio.
+		// os.MkdirAll no puede crear subcarpetas bajo él y debe fallar.
+		invalidPath := "/dev/null/invalid-path"
 
-	// --- LA CORONACIÓN DEL TEST ---
-	// Aseguramos que la carpeta ni siquiera se creó en el disco duro.
-	_, statErr := os.Stat(invalidPath)
-	assert.True(t, os.IsNotExist(statErr), "La ruta inválida no debió haber sido creada en el disco")
+		p := project.Project{
+			Name:      "scaffold_invalid",
+			Path:      invalidPath,
+			GoVersion: "1.26",
+		}
 
-	// Limpieza por si las moscas (buenas prácticas de testing de I/O)
-	defer os.RemoveAll(invalidPath)
+		files := map[string][]byte{
+			"go.mod": []byte("module scaffold_invalid\n"),
+		}
+
+		err := generator.WriteFiles(p, files)
+		assert.Error(t, err)
+	})
+
+	t.Run("CreatesSubfoldersAutomatically", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		p := project.Project{
+			Name:      "testapp",
+			Path:      tmpDir,
+			GoVersion: "1.26",
+		}
+
+		files := map[string][]byte{
+			".devcontainer/devcontainer.json": []byte(`{"name":"testapp"}`),
+		}
+
+		err := generator.WriteFiles(p, files)
+		assert.NoError(t, err)
+
+		devcontainerPath := filepath.Join(tmpDir, ".devcontainer", "devcontainer.json")
+		content, err := os.ReadFile(devcontainerPath)
+		assert.NoError(t, err, "devcontainer.json debió haber sido creado en .devcontainer/")
+		assert.Equal(t, `{"name":"testapp"}`, string(content))
+	})
+
+	t.Run("EmptyMapWritesNothing", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		p := project.Project{
+			Name:      "testapp",
+			Path:      tmpDir,
+			GoVersion: "1.26",
+		}
+
+		err := generator.WriteFiles(p, map[string][]byte{})
+		assert.NoError(t, err)
+
+		entries, err := os.ReadDir(tmpDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "El directorio del proyecto debió quedar vacío")
+	})
 }

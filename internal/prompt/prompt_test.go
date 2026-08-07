@@ -64,3 +64,85 @@ func TestString(t *testing.T) {
 		})
 	}
 }
+
+func TestConfirm(t *testing.T) {
+	tests := []struct {
+		CaseName       string
+		SimulatedInput string
+		MaxRetries     int
+		ExpectedResult bool
+		ExpectError    bool
+	}{
+		{
+			CaseName:       "Yes on first try",
+			SimulatedInput: "y\n",
+			MaxRetries:     2,
+			ExpectedResult: true,
+			ExpectError:    false,
+		},
+		{
+			CaseName:       "Yes full word",
+			SimulatedInput: "yes\n",
+			MaxRetries:     2,
+			ExpectedResult: true,
+			ExpectError:    false,
+		},
+		{
+			CaseName:       "No on first try",
+			SimulatedInput: "n\n",
+			MaxRetries:     2,
+			ExpectedResult: false,
+			ExpectError:    false,
+		},
+		{
+			CaseName:       "No full word",
+			SimulatedInput: "no\n",
+			MaxRetries:     2,
+			ExpectedResult: false,
+			ExpectError:    false,
+		},
+		{
+			CaseName:       "Case insensitive YES",
+			SimulatedInput: "YES\n",
+			MaxRetries:     2,
+			ExpectedResult: true,
+			ExpectError:    false,
+		},
+		{
+			CaseName:       "Invalid then yes on retry",
+			SimulatedInput: "maybe\ny\n",
+			MaxRetries:     2,
+			ExpectedResult: true,
+			ExpectError:    false,
+		},
+		{
+			CaseName:       "Exhausts all retries",
+			SimulatedInput: "maybe\nmaybe\nmaybe\n",
+			MaxRetries:     2,
+			ExpectedResult: false,
+			ExpectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.CaseName, func(t *testing.T) {
+			stdin := strings.NewReader(tt.SimulatedInput)
+			var stdout bytes.Buffer
+
+			result, err := Confirm(ConfirmOptions{
+				Stdin:        stdin,
+				Stdout:       &stdout,
+				Question:     "¿Usar devcontainer? [y/n]",
+				ErrorMessage: "Respuesta inválida. Use 'y' o 'n'.",
+				MaxRetries:   tt.MaxRetries,
+			})
+
+			if tt.ExpectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.ExpectedResult, result)
+		})
+	}
+}

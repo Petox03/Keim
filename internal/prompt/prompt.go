@@ -17,6 +17,43 @@ type StringOptions struct {
 	Validate     func(string) bool
 }
 
+// ConfirmOptions configura una pregunta de sí/no.
+type ConfirmOptions struct {
+	Stdin        io.Reader
+	Stdout       io.Writer
+	Question     string
+	ErrorMessage string
+	MaxRetries   int
+}
+
+// isYesNo valida que la entrada sea y/yes/n/no (case-insensitive).
+func isYesNo(input string) bool {
+	switch strings.ToLower(input) {
+	case "y", "yes", "n", "no":
+		return true
+	default:
+		return false
+	}
+}
+
+// Confirm hace una pregunta de sí/no y devuelve un bool.
+// Reusa la maquinaria de String con un validador interno para y/yes/n/no.
+func Confirm(opts ConfirmOptions) (bool, error) {
+	result, err := String(StringOptions{
+		Stdin:        opts.Stdin,
+		Stdout:       opts.Stdout,
+		Question:     opts.Question,
+		ErrorMessage: opts.ErrorMessage,
+		MaxRetries:   opts.MaxRetries,
+		Validate:     isYesNo,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return strings.HasPrefix(strings.ToLower(result), "y"), nil
+}
+
 // Función string que recibe el prompting de cualquier
 func String(opts StringOptions) (string, error) {
 

@@ -10,6 +10,7 @@ import (
 	"keim/internal/generator"
 	"keim/internal/godetect"
 	"keim/internal/project"
+	"keim/internal/prompt"
 	"keim/internal/templates"
 	"keim/internal/ui"
 	"keim/internal/validator"
@@ -32,10 +33,21 @@ func main() {
 	// Esto exige al usuario colocar las banderas ANTES del nombre del proyecto:
 	// "keim init --detect host clippy". Si lo invierte, --detect se tratará como posicional sobrante.
 	detectFlag := initCmd.String("detect", "", "cascada de detección (ej: host,manual=1.26)")
+	devcontainerFlag := initCmd.Bool("devcontainer", false, "generar configuración de devcontainer para VS Code/IDE compatibles")
 
 	if err := initCmd.Parse(os.Args[2:]); err != nil {
 		os.Exit(2)
 	}
+
+	// Detectar si --devcontainer fue pasado explícitamente (tri-state).
+	// flag.Visit sólo recorre los flags que el usuario escribió en la línea de comandos.
+	// Si no lo pasó, necesitamos decidir: prompt interactivo (si hay TTY) o default false (si no).
+	devcontainerSet := false
+	initCmd.Visit(func(f *flag.Flag) {
+		if f.Name == "devcontainer" {
+			devcontainerSet = true
+		}
+	})
 
 	// Paso 6: Obtener el nombre del proyecto desde los argumentos posicionales restantes.
 	// Keim acepta máximo 1 argumento posicional (el nombre). Si hay más, es error de uso:
@@ -64,14 +76,23 @@ func main() {
 		projectPath = filepath.Join(".", projectName)
 	}
 
+	// Resolver WithDevcontainer: tri-state (explícito true/false, o prompt interactivo).
+	var withDevcontainer bool
+	if devcontainerSet {
+		withDevcontainer = *devcontainerFlag
+	} else {
+		withDevcontainer = resolveDevcontainerInteractive()
+	}
+
 	p := project.Project{
-		Name: projectName,
-		Path: projectPath,
+		Name:             projectName,
+		Path:             projectPath,
+		WithDevcontainer: withDevcontainer,
 	}
 
 	// templates inspecciona directamente embed.FS para saber qué archivos genera Keim (ADR-025).
-	files := templates.FileNames()
-	forbiddenFiles := templates.GetForbiddenFiles()
+	specs := templates.AllFileNames(p.WithDevcontainer)
+	forbiddenFiles := templates.GetForbiddenFiles(p.WithDevcontainer)
 
 	// Validación pre-vuelo.
 	// Si la ruta no existe (ErrPathNotFound), se crea el directorio y se continúa (ADR-026).
@@ -103,6 +124,14 @@ func main() {
 
 	p.GoVersion = version
 
+	// Renderizar todas las plantillas en memoria (todo-o-nada, ADR-030).
+	// Si una sola plantilla falla, abortamos sin tocar el disco.
+	rendered, err := templates.RenderAll(specs, p)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Generación de archivos desde plantillas embebidas. Error de I/O = exit 1.
 	if needDir {
 		if err := generator.CreateProjectDir(p.Path); err != nil {
@@ -110,14 +139,52 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	if err := generator.Generate(p, files); err != nil {
+	if err := generator.WriteFiles(p, rendered); err != nil {
 		fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
 		os.Exit(1)
 	}
 
+	// Calcular las rutas de display para el reporte (wiring: FileSpec → string).
+	displayPaths := make([]string, len(specs))
+	for i, spec := range specs {
+		if spec.Dir != "" {
+			displayPaths[i] = filepath.Join(spec.Dir, spec.Name)
+		} else {
+			displayPaths[i] = spec.Name
+		}
+	}
+
 	// Imprimir el reporte final en consola utilizando ui.PrintReport (io.Writer inyectable).
-	if err := ui.PrintReport(os.Stdout, p, files); err != nil {
+	if err := ui.PrintReport(os.Stdout, p, displayPaths); err != nil {
 		fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// resolveDevcontainerInteractive decide si generar devcontainer cuando el usuario
+// no pasó --devcontainer explícitamente. Si stdin es un TTY, pregunta interactivamente.
+// Si no (CI pipeline, pipe, redirección), default false silencioso.
+func resolveDevcontainerInteractive() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+
+	// ModeCharDevice indica que stdin es una terminal interactiva.
+	if (fi.Mode() & os.ModeCharDevice) == 0 {
+		return false
+	}
+
+	result, err := prompt.Confirm(prompt.ConfirmOptions{
+		Stdin:        os.Stdin,
+		Stdout:       os.Stdout,
+		Question:     "¿Generar configuración de devcontainer? [y/n]",
+		ErrorMessage: "Respuesta inválida. Use 'y' o 'n'.",
+		MaxRetries:   2,
+	})
+	if err != nil {
+		return false
+	}
+
+	return result
 }

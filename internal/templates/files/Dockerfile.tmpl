@@ -3,10 +3,15 @@ FROM golang:{{ .GoVersion }}-alpine
 WORKDIR /app
 
 # git necesario para go get de dependencias
-RUN apk add --no-cache git
+RUN apk add --no-cache git{{if .WithDevcontainer}} build-base{{end}}
 
 # Redirigir cachés de Go a rutas que serán persistidas vía volúmenes nombrados
 ENV GOCACHE=/root/.cache/go-build
 ENV GOMODCACHE=/root/.cache/go-mod
+
+{{- if .WithDevcontainer}}
+# Instalar gopls (el motor de autocompletado, solo si se usa devcontainer)
+RUN go install golang.org/x/tools/gopls@latest
+{{- end}}
 
 CMD ["sleep", "infinity"]
