@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"keim/internal/generator"
 	"keim/internal/godetect"
@@ -15,15 +14,6 @@ import (
 	"keim/internal/ui"
 	"keim/internal/validator"
 )
-
-// strategyFactory mapea nombres de estrategias (de --detect o config) a constructores.
-// Es el punto exacto donde []string se convierte en []VersionStrategy (ADR-023).
-var strategyFactory = map[string]func(version string) godetect.VersionStrategy{
-	"host": func(_ string) godetect.VersionStrategy { return godetect.NewHostDetector() },
-	"manual": func(version string) godetect.VersionStrategy {
-		return godetect.NewManualDetector(version, os.Stdin, os.Stdout)
-	},
-}
 
 func main() {
 	// Paso 1-2: Verificar que el primer argumento posicional sea el subcomando "init".
@@ -98,7 +88,7 @@ func main() {
 
 	// Paso 8: Resolver la cascada de detección según la bandera --detect.
 	// Error de formato en el flag = error de uso (exit 2).
-	strategies, err := parseDetect(*detectFlag)
+	strategies, err := godetect.ParseDetect(*detectFlag)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
 		os.Exit(2)
@@ -130,43 +120,4 @@ func main() {
 		fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
 		os.Exit(1)
 	}
-}
-
-// parseDetect convierte el string de la bandera --detect en una lista ordenable de []VersionStrategy.
-// Sintaxis (ADR-004):
-//
-//	--detect host,manual=1.26   → Cascada en ese orden
-//	--detect host               → Solo detección local de Go
-//	--detect manual=1.26        → Manual con versión explícita
-//	--detect "" (sin flag)      → Default: host -> manual (sin versión explícita)
-func parseDetect(raw string) ([]godetect.VersionStrategy, error) {
-	if raw == "" {
-		// Default de iteración 1: host → manual (sin versión explícita).
-		// En iteraciones futuras esta cascada por defecto se leerá desde config.toml.
-		return []godetect.VersionStrategy{
-			godetect.NewHostDetector(),
-			godetect.NewManualDetector("", os.Stdin, os.Stdout),
-		}, nil
-	}
-
-	parts := strings.Split(raw, ",")
-	strategies := make([]godetect.VersionStrategy, 0, len(parts))
-
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			return nil, fmt.Errorf("estrategia vacía en la cascada --detect")
-		}
-
-		name, version, _ := strings.Cut(part, "=")
-
-		factory, ok := strategyFactory[name]
-		if !ok {
-			return nil, fmt.Errorf("estrategia '%s' no reconocida", name)
-		}
-
-		strategies = append(strategies, factory(version))
-	}
-
-	return strategies, nil
 }
