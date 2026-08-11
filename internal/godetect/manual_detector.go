@@ -42,7 +42,7 @@ func (md *ManualDetector) Detect() (string, error) {
 	res, err := prompt.String(prompt.StringOptions{
 		Stdin:        md.stdin,
 		Stdout:       md.stdout,
-		Question:     "Ingresa la versión:",
+		Question:     "Ingresa la versión de Go:",
 		ErrorMessage: "Versión inválida. Intenta de nuevo.",
 		MaxRetries:   2,
 		Validate: func(v string) bool {

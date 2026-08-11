@@ -1,26 +1,33 @@
 package godetect
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type HostDetector struct {
-	execFn func(name string, args ...string) ([]byte, error)
+	execFn  func(ctx context.Context, name string, args ...string) ([]byte, error)
+	timeout time.Duration
 }
 
 func NewHostDetector() *HostDetector {
 	return &HostDetector{
-		execFn: func(name string, args ...string) ([]byte, error) {
-			return exec.Command(name, args...).Output()
+		execFn: func(ctx context.Context, name string, args ...string) ([]byte, error) {
+			return exec.CommandContext(ctx, name, args...).Output()
 		},
+		timeout: 500 * time.Millisecond,
 	}
 }
 
 func (hd *HostDetector) Detect() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), hd.timeout)
+	defer cancel()
+
 	// Ejecutamos "go version" a través de nuestro wrapper execFn
-	output, err := hd.execFn("go", "version")
+	output, err := hd.execFn(ctx, "go", "version")
 	if err != nil {
 		return "", fmt.Errorf("error al ejecutar el comando: %w", err)
 	}

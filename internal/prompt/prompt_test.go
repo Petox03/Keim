@@ -65,6 +65,42 @@ func TestString(t *testing.T) {
 	}
 }
 
+func TestString_StdoutContent(t *testing.T) {
+	t.Run("Question appears in stdout", func(t *testing.T) {
+		stdin := strings.NewReader("1.26\n")
+		var stdout bytes.Buffer
+
+		_, err := String(StringOptions{
+			Stdin:        stdin,
+			Stdout:       &stdout,
+			Question:     "Ingresa la versión:",
+			ErrorMessage: "Versión inválida",
+			MaxRetries:   2,
+			Validate:     func(s string) bool { return s != "" },
+		})
+
+		assert.NoError(t, err)
+		assert.Contains(t, stdout.String(), "Ingresa la versión:")
+	})
+
+	t.Run("Error message appears in stdout on invalid input", func(t *testing.T) {
+		stdin := strings.NewReader("\n1.26\n")
+		var stdout bytes.Buffer
+
+		_, err := String(StringOptions{
+			Stdin:        stdin,
+			Stdout:       &stdout,
+			Question:     "Ingresa la versión:",
+			ErrorMessage: "Versión inválida",
+			MaxRetries:   2,
+			Validate:     func(s string) bool { return s != "" },
+		})
+
+		assert.NoError(t, err)
+		assert.Contains(t, stdout.String(), "Versión inválida")
+	})
+}
+
 func TestConfirm(t *testing.T) {
 	tests := []struct {
 		CaseName       string

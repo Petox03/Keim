@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [master]
+    tags: ["v*"]
   pull_request:
     branches: [master]
 
@@ -43,3 +44,38 @@ jobs:
 
       - name: Test
         run: go test ./... -v
+
+  release:
+    # Solo en tags v*. Compila el binario con la versión inyectada desde git
+    # (git describe) y lo adjunta como artifact del release.
+    name: build release binary
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout (con historial completo para git describe)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Resolve version from git
+        id: ver
+        run: echo "value=$(git describe --tags --always --dirty)" >> "$GITHUB_OUTPUT"
+
+      - name: Build binary
+        run: |
+          mkdir -p dist
+          go build -trimpath -ldflags "-X main.cliVersion=${{ steps.ver.outputs.value }}" -o dist/keim ./cmd/keim
+
+      - name: Upload release artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/keim

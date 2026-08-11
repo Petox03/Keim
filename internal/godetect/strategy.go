@@ -23,7 +23,7 @@ var strategyFactory = map[string]func(version string) VersionStrategy{
 //	--detect host,manual=1.26   → Cascada en ese orden
 //	--detect host               → Solo detección local de Go
 //	--detect manual=1.26        → Manual con versión explícita
-//	--detect "" (sin flag)      → Default: host -> manual (sin versión explícita)
+//	--detect "" (sin flag)      → Default: host → internet → manual
 func ParseDetect(raw string) ([]VersionStrategy, error) {
 	if raw == "" {
 		// Default de la cascada

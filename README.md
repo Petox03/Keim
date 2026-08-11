@@ -3,70 +3,78 @@
 [![CI](https://github.com/Petox03/Keim/actions/workflows/ci.yml/badge.svg)](https://github.com/Petox03/Keim/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/github/v/tag/Petox03/Keim?label=versi%C3%B3n)](https://github.com/Petox03/Keim/tags)
 
-> Keim (del alemán: germen, brote o semilla) es una CLI que automatiza el scaffolding de un entorno de desarrollo Go reproducible, aislado en Docker y sin requerir Go instalado en el host.
+> Keim (German for germ, sprout or seed) is a CLI that scaffolds a reproducible Go development environment isolated in Docker, with no Go installation required on the host.
 
 ---
 
-## Qué es
+## What it is
 
-Keim elimina la fricción inicial al comenzar proyectos en Go dentro de entornos contenerizados. Genera un entorno de desarrollo reproducible, eficiente y moderno basado en Docker, listo para programar con un solo comando.
+Keim removes the initial friction of starting Go projects in containerized environments. It generates a reproducible, efficient, modern Docker-based development setup ready to code with a single command.
 
-## Filosofía
+## Philosophy
 
-- **Cero Configuración Manual:** elimina el boilerplate repetitivo al iniciar un proyecto Go en Docker.
-- **Aislamiento Total:** el proyecto se ejecuta, compila y descarga dependencias exclusivamente dentro de Docker. No necesitas Go en tu máquina.
-- **Persistencia de Caché:** las cachés de Go (`GOCACHE`, `GOMODCACHE`) se persisten en volúmenes nombrados para evitar descargas y recompilaciones redundantes.
-- **Principio de No Maleficencia:** Keim jamás destruye, sobreescribe o altera archivos preexistentes en el directorio de trabajo.
+- **Zero Manual Configuration:** eliminates repetitive boilerplate when starting a Go project in Docker.
+- **Total Isolation:** the project runs, compiles and downloads dependencies exclusively inside Docker. You don't need Go on your machine.
+- **Cache Persistence:** Go caches (`GOCACHE`, `GOMODCACHE`) persist in named volumes to avoid redundant downloads and recompilations.
+- **Non-Maleficence:** Keim never destroys, overwrites or alters pre-existing files in the working directory.
 
-## Usuario objetivo
+## Target user
 
-Un desarrollador que está aprendiendo Go y quiere experimentar sin instalar Go en su máquina. Trabaja cómodo con Docker porque es el estándar que usa con su entorno social/corporativo.
+A developer learning Go who wants to experiment without installing Go locally. Comfortable with Docker as the standard tool in their social or corporate environment.
 
-## Qué genera
+## What it generates
 
-Keim inyecta 6 archivos en el directorio objetivo:
+Keim injects 6 files into the target directory (7 with `--devcontainer`):
 
 ```
-[Directorio del Proyecto]
+[Project Directory]
  ├── .dockerignore
  ├── .gitignore
  ├── compose.yml
  ├── Dockerfile
  ├── go.mod
- └── main.go
+ ├── main.go
+ └── .devcontainer/devcontainer.json   (only with --devcontainer)
 ```
 
-- `go.mod` — inicializa el módulo de Go con el nombre de la carpeta y la versión detectada.
-- `main.go` — punto de entrada básico en la raíz del módulo.
-- `Dockerfile` — imagen `golang:alpine` con cachés redirigidas a volúmenes persistibles.
-- `compose.yml` — servicio `app` dormido (`sleep infinity`), bind mount para código, volúmenes nombrados para caché.
-- `.gitignore` — excluye binarios temporales y caché local.
-- `.dockerignore` — excluye archivos irrelevantes del contexto de build de Docker.
+- `go.mod` — initializes the Go module with the folder name and detected version.
+- `main.go` — basic entry point at the module root.
+- `Dockerfile` — `golang:alpine` image with caches redirected to persistable volumes.
+- `compose.yml` — `app` service sleeping (`sleep infinity`), bind mount for code, named volumes for cache.
+- `.gitignore` — excludes temporary binaries and local cache.
+- `.dockerignore` — excludes irrelevant files from the Docker build context.
+- `.devcontainer/devcontainer.json` — devcontainer configuration for VS Code / compatible IDEs (only with `--devcontainer`).
 
-## Cómo se usa
-
-```
-keim init                                # Siembra en el directorio actual, cascada por defecto (host → manual)
-keim init mi-proyecto                    # Crea carpeta y siembra allí
-keim init --detect host mi-proyecto      # Solo detección del host
-keim init --detect manual=1.26 mi-proyecto  # Versión fija explícita
-```
-
-> **Importante:** `--detect` va antes del nombre del proyecto, no después
-> (`keim init mi-proyecto --detect host` no funciona).
-
-**Estrategias disponibles en esta iteración:** `host` (detecta el Go instalado en la
-máquina) y `manual=X.Y` (versión explícita). `internet` y `manual` sin versión (prompt por
-stdin) están planeados para iteración 2.
-
-Después de generar, el flujo de desarrollo es:
+## Usage
 
 ```
-cd mi-proyecto
+keim init                                # Scaffold in current directory, default cascade (host → internet → manual)
+keim init my-project                     # Create folder and scaffold there
+keim init --detect host my-project       # Host detection only
+keim init --detect manual=1.26 my-project  # Explicit fixed version
+keim init --devcontainer my-project      # Generate devcontainer configuration
+```
+
+> **Important:** `--detect` goes before the project name, not after
+> (`keim init my-project --detect host` does not work).
+
+**Available detection strategies:**
+
+- `host` — detects Go installed on the machine.
+- `internet` — queries the latest stable Go version online.
+- `manual=X.Y` — explicit fixed version.
+- `manual` (no version) — interactive prompt via stdin.
+
+The default cascade is `host → internet → manual`.
+
+After generation, the development workflow is:
+
+```
+cd my-project
 docker compose up -d
 docker compose exec app go run .
 ```
 
-## Estado
+## Status
 
-MVP en desarrollo. Iteración 1 (walking skeleton) cerrada: `keim init` es funcional end-to-end. El commit 8 (`internal/config`) se difiere formalmente a iteración 2, junto con `InternetDetector` y su integración real en `main.go`.
+Version `0.2.1`. `keim init` is fully functional end-to-end with complete detection cascade (`host → internet → manual`), `--devcontainer` support and a Lipgloss-based visual interface.

@@ -16,6 +16,17 @@ import (
 	"keim/internal/validator"
 )
 
+// cliVersion is the Keim version injected at build time.
+// "dev" fallback for local builds without -ldflags (does not pretend to be an official release).
+// Official build (cross-compile for Windows, stripped binary):
+//
+//	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X main.cliVersion=$(git describe --tags --always --dirty)" -o build/keim.exe ./cmd/keim
+//
+// Or hardcode the version instead of git describe:
+//
+//	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X main.cliVersion=0.2.1" -o build/keim.exe ./cmd/keim
+var cliVersion = "dev"
+
 func main() {
 	// Paso 1-2: Verificar que el primer argumento posicional sea el subcomando "init".
 	// Keim en esta iteración solo entiende "init". Cualquier otra opción o ausencia
@@ -23,6 +34,14 @@ func main() {
 	if len(os.Args) < 2 || os.Args[1] != "init" {
 		fmt.Fprintln(os.Stderr, "uso: keim init [--detect <cascada>] [nombre]")
 		os.Exit(2)
+	}
+
+	// Banner: solo en TTY, solo después de confirmar que el subcomando es "init".
+	if isStdinTerminal() {
+		if err := ui.PrintBanner(os.Stdout, cliVersion); err != nil {
+			fmt.Fprintf(os.Stderr, "keim: error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	// Paso 3: Crear un FlagSet aislado para el subcomando "init".
@@ -116,13 +135,13 @@ func main() {
 	}
 
 	// Detección de la versión de Go. Si ninguna estrategia responde con éxito, aborta con exit 4.
-	version, err := godetect.Detect(strategies)
+	goVersion, err := godetect.Detect(strategies)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "keim: error: detección fallida: %v\n", err)
 		os.Exit(4)
 	}
 
-	p.GoVersion = version
+	p.GoVersion = goVersion
 
 	// Renderizar todas las plantillas en memoria (todo-o-nada, ADR-030).
 	// Si una sola plantilla falla, abortamos sin tocar el disco.
@@ -144,6 +163,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Resolver la ruta absoluta para el reporte (las operaciones de disco ya terminaron).
+	if absPath, err := filepath.Abs(p.Path); err == nil {
+		p.Path = absPath
+	}
+
 	// Calcular las rutas de display para el reporte (wiring: FileSpec → string).
 	displayPaths := make([]string, len(specs))
 	for i, spec := range specs {
@@ -161,17 +185,21 @@ func main() {
 	}
 }
 
-// resolveDevcontainerInteractive decide si generar devcontainer cuando el usuario
-// no pasó --devcontainer explícitamente. Si stdin es un TTY, pregunta interactivamente.
-// Si no (CI pipeline, pipe, redirección), default false silencioso.
-func resolveDevcontainerInteractive() bool {
+// isStdinTerminal verifica si stdin es una terminal interactiva.
+// En CI, pipes o redirecciones, retorna false.
+func isStdinTerminal() bool {
 	fi, err := os.Stdin.Stat()
 	if err != nil {
 		return false
 	}
+	return (fi.Mode() & os.ModeCharDevice) != 0
+}
 
-	// ModeCharDevice indica que stdin es una terminal interactiva.
-	if (fi.Mode() & os.ModeCharDevice) == 0 {
+// resolveDevcontainerInteractive decide si generar devcontainer cuando el usuario
+// no pasó --devcontainer explícitamente. Si stdin es un TTY, pregunta interactivamente.
+// Si no (CI pipeline, pipe, redirección), default false silencioso.
+func resolveDevcontainerInteractive() bool {
+	if !isStdinTerminal() {
 		return false
 	}
 

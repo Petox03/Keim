@@ -4,68 +4,62 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"keim/internal/project"
+	"keim/internal/theme"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 func PrintReport(w io.Writer, p project.Project, files []string) error {
-
 	if w == nil {
 		return fmt.Errorf("el io.Writer no puede ser nil")
 	}
 
-	// 1. Encabezado principal y detalles del proyecto
-	_, err := fmt.Fprintf(
-		w,
-		"Proyecto '%s' creado con éxito!\n\n📌 Detalles del proyecto:\n	• Ruta:           %s\n	• Versión de Go:  %s\n",
-		p.Name,
-		p.Path,
-		p.GoVersion,
-	)
-	if err != nil {
-		return fmt.Errorf("falló la escritura en io.Writer: %w", err)
-	}
+	// Estilos basados en la paleta centralizada de Keim CLI (internal/theme).
+	styleTitle := lipgloss.NewStyle().Foreground(theme.Primary).Bold(true)
+	styleHeader := lipgloss.NewStyle().Foreground(theme.Text).Bold(true)
+	styleLabel := lipgloss.NewStyle().Foreground(theme.Muted)
+	styleValue := lipgloss.NewStyle().Foreground(theme.Text).Bold(true)
+	styleBullet := lipgloss.NewStyle().Foreground(theme.Accent)
+	styleCode := lipgloss.NewStyle().Foreground(theme.Primary)
+	styleBox := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(theme.Secondary).
+		Padding(1, 2)
 
-	// 2. Sección de archivos generados
-	_, err = fmt.Fprintln(w, "\nArchivos generados:")
-	if err != nil {
-		return fmt.Errorf("error al escribir encabezado de archivos: %w", err)
-	}
+	var sb strings.Builder
 
+	// Encabezado principal
+	fmt.Fprintf(&sb, "%s\n\n", styleTitle.Render(fmt.Sprintf("¡Proyecto '%s' creado con éxito!", p.Name)))
+
+	// Detalles del proyecto
+	fmt.Fprintf(&sb, "%s\n", styleHeader.Render("Detalles del proyecto:"))
+	fmt.Fprintf(&sb, "  %s %s %s\n", styleBullet.Render("•"), styleLabel.Render("Ruta:           "), styleValue.Render(p.Path))
+	fmt.Fprintf(&sb, "  %s %s %s\n", styleBullet.Render("•"), styleLabel.Render("Versión de Go:  "), styleValue.Render(p.GoVersion))
+	fmt.Fprintf(&sb, "  %s %s %s\n\n", styleBullet.Render("•"), styleLabel.Render("Devcontainer:   "), styleValue.Render(fmt.Sprintf("%v", p.WithDevcontainer)))
+
+	// Archivos generados
+	fmt.Fprintf(&sb, "%s\n", styleHeader.Render("Archivos generados:"))
 	for _, file := range files {
-		_, err := fmt.Fprintf(w, "	• %s\n", file)
-		if err != nil {
-			return fmt.Errorf("error al escribir el archivo %q: %w", file, err)
-		}
+		fmt.Fprintf(&sb, "  %s %s\n", styleBullet.Render("•"), styleLabel.Render(file))
 	}
+	sb.WriteString("\n")
 
-	// 3. Sección de siguientes pasos
-	_, err = fmt.Fprintln(w, "\nSiguientes pasos:")
-	if err != nil {
-		return fmt.Errorf("error al escribir encabezado de pasos: %w", err)
-	}
-
+	// Siguientes pasos
+	fmt.Fprintf(&sb, "%s\n", styleHeader.Render("Siguientes pasos:"))
 	cleanPath := filepath.Clean(p.Path)
 
-	// Si el proyecto se creó en el directorio actual, omitimos el paso "cd"
 	if cleanPath == "." || cleanPath == "" {
-		const tpl = `	1. docker compose up -d
-	2. docker compose exec app go run .
-`
-		_, err := fmt.Fprint(w, tpl)
-		if err != nil {
-			return fmt.Errorf("error al escribir pasos: %w", err)
-		}
+		fmt.Fprintf(&sb, "  %s %s\n", styleBullet.Render("1."), styleCode.Render("docker compose up -d"))
+		fmt.Fprintf(&sb, "  %s %s\n", styleBullet.Render("2."), styleCode.Render("docker compose exec app go run ."))
 	} else {
-		const tpl = `	1. cd %s
-	2. docker compose up -d
-	3. docker compose exec app go run .
-`
-		_, err := fmt.Fprintf(w, tpl, cleanPath)
-		if err != nil {
-			return fmt.Errorf("error al escribir pasos: %w", err)
-		}
+		fmt.Fprintf(&sb, "  %s %s\n", styleBullet.Render("1."), styleCode.Render("cd "+cleanPath))
+		fmt.Fprintf(&sb, "  %s %s\n", styleBullet.Render("2."), styleCode.Render("docker compose up -d"))
+		fmt.Fprintf(&sb, "  %s %s\n", styleBullet.Render("3."), styleCode.Render("docker compose exec app go run ."))
 	}
 
-	return nil
+	_, err := fmt.Fprintln(w, styleBox.Render(sb.String()))
+	return err
 }

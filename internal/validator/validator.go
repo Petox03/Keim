@@ -26,23 +26,39 @@ func Validate(path string, forbiddenFiles map[string]bool) error {
 		return fmt.Errorf("la ruta '%s' no es accesible: %w", path, err)
 	}
 
-	// 2. Verificar si alguna ruta prohibida ya existe en disco (case-insensitive).
-	var conflicts []string
-
+	// 2. Agrupar las rutas prohibidas por directorio padre para leer cada
+	// directorio una sola vez, sin importar cuántos archivos prohibidos viva ahí.
+	type forbiddenEntry struct {
+		relDir   string // filepath.Dir(relPath) original, para el reporte
+		baseName string // lowercase, para comparación case-insensitive
+	}
+	byParent := make(map[string][]forbiddenEntry)
 	for relPath := range forbiddenFiles {
 		parentDir := filepath.Join(path, filepath.Dir(relPath))
-		baseName := strings.ToLower(filepath.Base(relPath))
+		byParent[parentDir] = append(byParent[parentDir], forbiddenEntry{
+			relDir:   filepath.Dir(relPath),
+			baseName: strings.ToLower(filepath.Base(relPath)),
+		})
+	}
 
+	// 3. Verificar si alguna ruta prohibida ya existe en disco (case-insensitive).
+	var conflicts []string
+	for parentDir, forbiddenList := range byParent {
 		entries, err := os.ReadDir(parentDir)
 		if err != nil {
-			// El directorio padre no existe, no hay conflicto posible para esta ruta.
+			// El directorio padre no existe, no hay conflicto posible para estas rutas.
 			continue
 		}
-
 		for _, entry := range entries {
-			if !entry.IsDir() && strings.ToLower(entry.Name()) == baseName {
-				conflicts = append(conflicts, filepath.Join(filepath.Dir(relPath), entry.Name()))
-				break
+			if entry.IsDir() {
+				continue
+			}
+			entryLower := strings.ToLower(entry.Name())
+			for _, fe := range forbiddenList {
+				if fe.baseName == entryLower {
+					conflicts = append(conflicts, filepath.Join(fe.relDir, entry.Name()))
+					break
+				}
 			}
 		}
 	}

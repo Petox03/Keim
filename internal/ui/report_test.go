@@ -73,6 +73,38 @@ func TestPrintReport(t *testing.T) {
 		})
 	}
 
+	t.Run("Displays Devcontainer status when true", func(t *testing.T) {
+		var buf bytes.Buffer
+		p := project.Project{
+			Name:             "clippy",
+			Path:             "clippy",
+			GoVersion:        "1.25",
+			WithDevcontainer: true,
+		}
+
+		err := ui.PrintReport(&buf, p, files)
+
+		assert.NoError(t, err)
+		assert.Contains(t, buf.String(), "Devcontainer")
+		assert.Contains(t, buf.String(), "true")
+	})
+
+	t.Run("Displays Devcontainer status when false", func(t *testing.T) {
+		var buf bytes.Buffer
+		p := project.Project{
+			Name:             "clippy",
+			Path:             "clippy",
+			GoVersion:        "1.25",
+			WithDevcontainer: false,
+		}
+
+		err := ui.PrintReport(&buf, p, files)
+
+		assert.NoError(t, err)
+		assert.Contains(t, buf.String(), "Devcontainer")
+		assert.Contains(t, buf.String(), "false")
+	})
+
 	t.Run("Error: Writer is nil", func(t *testing.T) {
 		p := project.Project{Name: "clippy", Path: "clippy", GoVersion: "1.25"}
 
