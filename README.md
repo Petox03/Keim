@@ -1,7 +1,7 @@
 # Keim (🌱)
 
 [![CI](https://github.com/Petox03/Keim/actions/workflows/ci.yml/badge.svg)](https://github.com/Petox03/Keim/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/github/v/tag/Petox03/Keim?label=versi%C3%B3n)](https://github.com/Petox03/Keim/tags)
+[![Version](https://img.shields.io/github/v/tag/Petox03/Keim?label=version)](https://github.com/Petox03/Keim/tags)
 
 > Keim (German for germ, sprout or seed) is a CLI that scaffolds a reproducible Go development environment isolated in Docker, with no Go installation required on the host.
 
