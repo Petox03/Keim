@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"keim/internal/theme"
 
@@ -14,6 +15,12 @@ import (
 func PrintBanner(w io.Writer, version string) error {
 	if w == nil {
 		return fmt.Errorf("el io.Writer no puede ser nil")
+	}
+
+	// Normalizar prefijo "v": git describe devuelve "v0.2.1", hardcodeo "0.2.1", fallback "dev".
+	// "dev" no lleva prefijo. Si ya tiene "v", no se duplica.
+	if version != "dev" && !strings.HasPrefix(version, "v") {
+		version = "v" + version
 	}
 
 	asciiArt := `
@@ -36,7 +43,7 @@ func PrintBanner(w io.Writer, version string) error {
 	versionStyle := lipgloss.NewStyle().
 		Foreground(theme.Secondary).
 		Italic(true).
-		SetString("v" + version)
+		SetString(version)
 
 	taglineStyle := lipgloss.NewStyle().
 		Foreground(theme.Muted).
