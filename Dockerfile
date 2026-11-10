@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine
+FROM golang:1.27-alpine
 
 WORKDIR /app
 
@@ -10,6 +10,6 @@ ENV GOCACHE=/root/.cache/go-build
 ENV GOMODCACHE=/root/.cache/go-mod
 
 # Instalar de una vez gopls (el motor de autocompletado)
-RUN go install golang.org/x/tools/gopls@latest
+RUN go install golang.org/x/tools/gopls@v0.24.0
 
 CMD ["sleep", "infinity"]
