@@ -5,6 +5,8 @@
 
 > Keim (German for germ, sprout or seed) is a CLI that scaffolds a reproducible Go development environment isolated in Docker, with no Go installation required on the host.
 
+![Keim scaffolding a Go project end-to-end](docs/demo.gif)
+
 ---
 
 ## What it is
@@ -60,7 +62,7 @@ keim init --devcontainer my-project      # Generate devcontainer configuration
 
 **Available detection strategies:**
 
-- `host` — detects Go installed on the machine.
+- `host` — detects the Go release installed on the machine (via `go env GOVERSION`). Prerelease, beta or devel toolchains are skipped and fall through to the next strategy.
 - `internet` — queries the latest stable Go version online.
 - `manual=X.Y` — explicit fixed version.
 - `manual` (no version) — interactive prompt via stdin.
@@ -77,4 +79,4 @@ docker compose exec app go run .
 
 ## Status
 
-Version `0.2.1`. `keim init` is fully functional end-to-end with complete detection cascade (`host → internet → manual`), `--devcontainer` support and a Lipgloss-based visual interface.
+Version `0.2.2`. `keim init` is fully functional end-to-end with complete detection cascade (`host → internet → manual`), `--devcontainer` support and a Lipgloss-based visual interface.

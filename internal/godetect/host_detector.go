@@ -26,21 +26,27 @@ func (hd *HostDetector) Detect() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hd.timeout)
 	defer cancel()
 
-	// Ejecutamos "go version" a través de nuestro wrapper execFn
-	output, err := hd.execFn(ctx, "go", "version")
+	// "go env GOVERSION" devuelve runtime.Version() en formato machine-readable (ADR-047)
+	output, err := hd.execFn(ctx, "go", "env", "GOVERSION")
 	if err != nil {
 		return "", fmt.Errorf("error al ejecutar el comando: %w", err)
 	}
 
-	// El output suele traer un salto de línea al final, Limpiar y separar
-	rawVersion := strings.TrimSpace(string(output))
-	words := strings.Fields(rawVersion)
+	raw := strings.TrimSpace(string(output))
+	fields := strings.Fields(raw)
 
-	for _, word := range words {
-		if strings.HasPrefix(word, "go") && len(word) > 2 && word[2] >= '0' && word[2] <= '9' {
-			return word[2:], nil
-		}
+	var version string
+	if len(fields) > 0 {
+		version = strings.TrimPrefix(fields[0], "go")
 	}
 
-	return "", fmt.Errorf("no se encontró una versión válida de Go en la salida: %s", rawVersion)
+	// Cortar en el primer guion recupera la base de sufijos de release
+	// ("-X:nodwarf5" desde Go 1.26, vendor como "-1ubuntu3"). El sufijo
+	// "-devel" es la excepción: un toolchain devel no es un release aunque
+	// su base numérica sea válida, y cae a la cascada (ADR-047).
+	base, suffix, _ := strings.Cut(version, "-")
+	if strings.HasPrefix(suffix, "devel") || !versionRegex.MatchString(base) {
+		return "", fmt.Errorf("salida inesperada de 'go env GOVERSION': %s", raw)
+	}
+	return base, nil
 }
