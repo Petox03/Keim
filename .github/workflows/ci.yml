@@ -70,12 +70,19 @@ jobs:
         id: ver
         run: echo "value=$(git describe --tags --always --dirty)" >> "$GITHUB_OUTPUT"
 
-      - name: Build binary
+      - name: Build binaries (linux + windows)
         run: |
           mkdir -p dist
-          go build -trimpath -ldflags "-X main.cliVersion=${{ steps.ver.outputs.value }}" -o dist/keim ./cmd/keim
+          CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.cliVersion=${{ steps.ver.outputs.value }}" -o dist/keim ./cmd/keim
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w -X main.cliVersion=${{ steps.ver.outputs.value }}" -o dist/keim.exe ./cmd/keim
 
-      - name: Upload release artifact
+      - name: Checksums
+        run: cd dist && sha256sum keim keim.exe > SHA256SUMS.txt
+
+      - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/keim
+          files: |
+            dist/keim
+            dist/keim.exe
+            dist/SHA256SUMS.txt
