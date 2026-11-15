@@ -10,13 +10,14 @@ import (
 
 func TestManualDetector_Detect(t *testing.T) {
 	tests := []struct {
-		CaseName        string
-		inputVersion    string
-		stdin           string
-		wantVersion     string
-		wantErr         bool
-		wantErrContains []string
-		wantStdoutEmpty bool
+		CaseName           string
+		inputVersion       string
+		stdin              string
+		wantVersion        string
+		wantErr            bool
+		wantErrContains    []string
+		wantStdoutEmpty    bool
+		wantStdoutContains string
 	}{
 		{
 			CaseName:        "Explicit version with patch",
@@ -92,6 +93,34 @@ func TestManualDetector_Detect(t *testing.T) {
 			wantVersion:     "1.26.2",
 			wantStdoutEmpty: false,
 		},
+		{
+			CaseName:           "Invalid explicit version falls back to prompt",
+			inputVersion:       "abc",
+			stdin:              "1.26\n",
+			wantVersion:        "1.26",
+			wantStdoutEmpty:    false,
+			wantStdoutContains: "no es válida",
+		},
+		{
+			CaseName:           "Invalid explicit version with EOF stdin",
+			inputVersion:       "abc",
+			stdin:              "",
+			wantVersion:        "",
+			wantErr:            true,
+			wantErrContains:    []string{"manual detector:", "stdin"},
+			wantStdoutEmpty:    false,
+			wantStdoutContains: "no es válida",
+		},
+		{
+			CaseName:           "Invalid explicit version with invalid stdin retries",
+			inputVersion:       "abc",
+			stdin:              "x\ny\nz\n",
+			wantVersion:        "",
+			wantErr:            true,
+			wantErrContains:    []string{"manual detector:", "reintentos"},
+			wantStdoutEmpty:    false,
+			wantStdoutContains: "no es válida",
+		},
 	}
 
 	for _, tt := range tests {
@@ -116,6 +145,10 @@ func TestManualDetector_Detect(t *testing.T) {
 				assert.Empty(t, stdout.String())
 			} else {
 				assert.NotEmpty(t, stdout.String())
+			}
+
+			if tt.wantStdoutContains != "" {
+				assert.Contains(t, stdout.String(), tt.wantStdoutContains)
 			}
 		})
 	}

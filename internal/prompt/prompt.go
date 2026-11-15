@@ -104,3 +104,10 @@ func String(opts StringOptions) (string, error) {
 	// Cuando se supera el límite de intentos, se regresa como error.
 	return "", fmt.Errorf("se superó el número máximo de reintentos (%d)", opts.MaxRetries)
 }
+
+// Warn imprime un aviso en el writer dado con el estilo de advertencia del tema.
+// Infraestructura de UI compartida para mensajes no fatales (ej. valor de flag inválido).
+func Warn(w io.Writer, msg string) {
+	styleWarn := lipgloss.NewStyle().Foreground(theme.Warning)
+	fmt.Fprintln(w, styleWarn.Render(msg))
+}

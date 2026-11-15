@@ -36,7 +36,11 @@ var versionRegex = regexp.MustCompile(`^\d+\.\d+(\.\d+)?$`)
 func (md *ManualDetector) Detect() (string, error) {
 
 	if md.Version != "" {
-		return md.Version, nil
+		if versionRegex.Match([]byte(md.Version)) {
+			return md.Version, nil
+		}
+		// Versión explícita inválida (manual=abc): avisar y caer al prompt
+		prompt.Warn(md.stdout, fmt.Sprintf("La versión '%s' no es válida (formato esperado: X.Y o X.Y.Z).", md.Version))
 	}
 
 	res, err := prompt.String(prompt.StringOptions{

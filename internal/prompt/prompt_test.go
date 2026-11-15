@@ -164,6 +164,14 @@ func TestString_EOF(t *testing.T) {
 	})
 }
 
+func TestWarn(t *testing.T) {
+	var stdout bytes.Buffer
+
+	Warn(&stdout, "La versión 'abc' no es válida.")
+
+	assert.Contains(t, stdout.String(), "La versión 'abc' no es válida.")
+}
+
 func TestConfirm(t *testing.T) {
 	tests := []struct {
 		CaseName       string
