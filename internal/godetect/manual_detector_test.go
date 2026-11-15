@@ -61,7 +61,7 @@ func TestManualDetector_Detect(t *testing.T) {
 			stdin:           "",
 			wantVersion:     "",
 			wantErr:         true,
-			wantErrContains: []string{"manual detector:", "reintentos"},
+			wantErrContains: []string{"manual detector:", "stdin"},
 			wantStdoutEmpty: false,
 		},
 		{

@@ -70,24 +70,30 @@ func String(opts StringOptions) (string, error) {
 	// Declaramos el número de reintentos dado por la inicialización del struct que se recibe.
 	for i := 0; i <= opts.MaxRetries; i++ {
 
-		// Imprimimos en la salida la pregunta con estilo
+		// Imprimimos en la salida la pregunta con estilo, sin \n: en TTY el echo
+		// del Enter del usuario lo aporta; en un pipe la siguiente salida queda
+		// pegada a la pregunta (artefacto cosmético, aceptado).
 		fmt.Fprint(opts.Stdout, stylePrompt.Render("? ")+opts.Question+" ")
 
 		// Scan() Devuelve un bool. Si se hace el escanoe pasa, sino se lo salta
-		if scanner.Scan() {
+		if !scanner.Scan() {
 
-			// Quitamos los espacios de el texto guardado en memoria
-			input := strings.TrimSpace(scanner.Text())
-
-			// Si no hay que validar o la validación pasa, regresamos el texto sin errores
-			if opts.Validate == nil || opts.Validate(input) {
-				return input, nil
+			// Si el escaner dio error lo regresamos.
+			if err := scanner.Err(); err != nil {
+				return "", fmt.Errorf("error al leer la entrada: %w", err)
 			}
+
+			// Scan() false sin error: stdin cerrado (EOF). Reintentar contra una
+			// entrada muerta no tiene sentido: se aborta de inmediato.
+			return "", fmt.Errorf("stdin llegó a su fin sin respuesta válida: %w", io.EOF)
 		}
 
-		// Si el escaner dio error lo regresamos.
-		if err := scanner.Err(); err != nil {
-			return "", fmt.Errorf("error al leer la entrada: %w", err)
+		// Quitamos los espacios de el texto guardado en memoria
+		input := strings.TrimSpace(scanner.Text())
+
+		// Si no hay que validar o la validación pasa, regresamos el texto sin errores
+		if opts.Validate == nil || opts.Validate(input) {
+			return input, nil
 		}
 
 		// Si dio un formato inválido, le regresamos en la tubería de la salida dada el mensaje de error

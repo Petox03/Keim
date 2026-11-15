@@ -2,6 +2,7 @@ package prompt
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 
@@ -98,6 +99,68 @@ func TestString_StdoutContent(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Contains(t, stdout.String(), "Versión inválida")
+	})
+}
+
+func TestString_EOF(t *testing.T) {
+	isNotEmpty := func(s string) bool { return s != "" }
+
+	t.Run("Empty stdin aborts immediately on EOF", func(t *testing.T) {
+		stdin := strings.NewReader("")
+		var stdout bytes.Buffer
+
+		result, err := String(StringOptions{
+			Stdin:        stdin,
+			Stdout:       &stdout,
+			Question:     "Enter version: ",
+			ErrorMessage: "Invalid input",
+			MaxRetries:   2,
+			Validate:     isNotEmpty,
+		})
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, io.EOF)
+		assert.Empty(t, result)
+		assert.Equal(t, 1, strings.Count(stdout.String(), "Enter version:"),
+			"la pregunta debe imprimirse una sola vez, no una por reintento")
+		assert.NotContains(t, stdout.String(), "Invalid input")
+	})
+
+	t.Run("Aborts on EOF after an invalid line", func(t *testing.T) {
+		stdin := strings.NewReader("abc\n")
+		var stdout bytes.Buffer
+
+		_, err := String(StringOptions{
+			Stdin:        stdin,
+			Stdout:       &stdout,
+			Question:     "Enter version: ",
+			ErrorMessage: "Invalid input",
+			MaxRetries:   2,
+			Validate:     func(s string) bool { return s == "1.26" },
+		})
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, io.EOF)
+		assert.Equal(t, 2, strings.Count(stdout.String(), "Enter version:"),
+			"el error debe llegar en el segundo intento, no tras agotar reintentos")
+		assert.Equal(t, 1, strings.Count(stdout.String(), "Invalid input"))
+	})
+
+	t.Run("Valid input without trailing newline succeeds", func(t *testing.T) {
+		stdin := strings.NewReader("1.26")
+		var stdout bytes.Buffer
+
+		result, err := String(StringOptions{
+			Stdin:        stdin,
+			Stdout:       &stdout,
+			Question:     "Enter version: ",
+			ErrorMessage: "Invalid input",
+			MaxRetries:   2,
+			Validate:     isNotEmpty,
+		})
+
+		assert.NoError(t, err)
+		assert.Equal(t, "1.26", result)
 	})
 }
 
