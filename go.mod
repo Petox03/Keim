@@ -1,6 +1,6 @@
 module keim
 
-go 1.26
+go 1.27
 
 require (
 	github.com/charmbracelet/lipgloss v1.1.0
