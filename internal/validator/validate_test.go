@@ -52,7 +52,7 @@ func TestValidate(t *testing.T) {
 			CaseName:          "Conflict with devcontainer.json in .devcontainer subfolder",
 			Forbidden:         forbiddenFilesWithDevcontainer,
 			PreExistingFiles:  []string{".devcontainer/devcontainer.json"},
-			ExpectedErrSuffix: "contiene archivos en conflicto: .devcontainer/devcontainer.json",
+			ExpectedErrSuffix: "contiene archivos en conflicto: " + filepath.Join(".devcontainer", "devcontainer.json"),
 		},
 		{
 			// Falso positivo original: devcontainer.json en la raíz se marcaba

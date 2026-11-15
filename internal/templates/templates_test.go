@@ -122,8 +122,8 @@ func TestGetForbiddenFiles(t *testing.T) {
 		{"dockerfile.prod variant", forbidden, "dockerfile.prod", true},
 		{"unrelated readme.md", forbidden, "readme.md", false},
 		{"unrelated license", forbidden, "license", false},
-		{"devcontainer.json in .devcontainer when true", forbiddenWithOptionals, ".devcontainer/devcontainer.json", true},
-		{"devcontainer.json in .devcontainer when false", forbidden, ".devcontainer/devcontainer.json", false},
+		{"devcontainer.json in .devcontainer when true", forbiddenWithOptionals, filepath.Join(".devcontainer", "devcontainer.json"), true},
+		{"devcontainer.json in .devcontainer when false", forbidden, filepath.Join(".devcontainer", "devcontainer.json"), false},
 		{"devcontainer.json in root is NOT forbidden", forbiddenWithOptionals, "devcontainer.json", false},
 	}
 
