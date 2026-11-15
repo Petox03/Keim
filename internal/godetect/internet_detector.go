@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -29,8 +30,7 @@ func NewInternetDetector(c HTTPClient) *InternetDetector {
 	}
 }
 
-func (id *InternetDetector) Detect() (string, error) {
-
+func (id *InternetDetector) Detect() (version string, retErr error) {
 	ctx, cancel := context.WithTimeout(context.Background(), id.timeout)
 	defer cancel()
 
@@ -43,7 +43,23 @@ func (id *InternetDetector) Detect() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("ocurrió un error en la respuesta: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() {
+		if cerr := res.Body.Close(); cerr != nil && retErr == nil {
+			retErr = fmt.Errorf("error al cerrar el cuerpo de la respuesta: %w", cerr)
+		}
+	}()
+
+	if res.StatusCode != http.StatusOK {
+		status := fmt.Sprintf("%d %s", res.StatusCode, http.StatusText(res.StatusCode))
+		snippet, rerr := io.ReadAll(io.LimitReader(res.Body, 512))
+		if rerr != nil {
+			return "", fmt.Errorf("status inesperado en la respuesta: %s (no se pudo leer el cuerpo: %w)", status, rerr)
+		}
+		if cuerpo := strings.Join(strings.Fields(string(snippet)), " "); cuerpo != "" {
+			return "", fmt.Errorf("status inesperado en la respuesta: %s (cuerpo: %s)", status, cuerpo)
+		}
+		return "", fmt.Errorf("status inesperado en la respuesta: %s", status)
+	}
 
 	var result []map[string]any
 	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
@@ -59,8 +75,11 @@ func (id *InternetDetector) Detect() (string, error) {
 		return "", fmt.Errorf("no se encontró el campo 'version' o no es un string")
 	}
 
-	version := strings.TrimPrefix(rawVersion, "go")
+	version = strings.TrimPrefix(rawVersion, "go")
+
+	if !versionRegex.MatchString(version) {
+		return "", fmt.Errorf("la versión recibida no tiene un formato válido: %s", rawVersion)
+	}
 
 	return version, nil
-
 }
